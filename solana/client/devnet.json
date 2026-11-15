@@ -1,0 +1,15 @@
+{
+  "cluster": "devnet",
+  "programId": "9GUKJUTYMZpvRhkfQyvVZ3j1Y8rcjKPfwJ5ovmfU9bY1",
+  "layout": "v2",
+  "usdcMint": "Av6WfFrwuZ2yhjfAH54z3oL6jEas82vXXrB7LJDkapJ6",
+  "mints": {
+    "AAPL": "31U5BjqSBcFYJ8CaWMsaAQgwuMuNczK2iTrZQJk6TMew",
+    "AMZN": "12vkm2VQerv1qYA2ktq8fHayrukfJ4wXTHzqUHefizaG",
+    "GOOGL": "8rZkXCLrv2Njm6H2ciJo2LnuzBudW3pLy58V3MkV1qHo",
+    "MSFT": "34eivcaQz34mj2cspX5PHHEPDd7RcuNuJSEZ5ViTAAZC",
+    "NVDA": "FNjn8hvveMdTGi9gNjMBpqAt4aVq4he3MGFTwZi9R7fg",
+    "TSLA": "8Sd3vN8NVqBEiHyp8zLdZaiMbz9TMyDWvmowjryzpgMx",
+    "TBILL": "3WS44V2kxEtFBzob61jLewm7TXT6Y7nJCjrSjKtWkya7"
+  }
+}

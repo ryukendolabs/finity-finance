@@ -1,0 +1,18 @@
+[Unit]
+Description=Finity keeper bot (Solana devnet): prices, market hours, liquidations
+After=network-online.target finity-relayer@1.service finity-relayer@2.service finity-relayer@3.service
+Wants=network-online.target
+
+[Service]
+# Private settings such as SOLANA_RPC_URL (a QuickNode endpoint); optional, never committed.
+EnvironmentFile=-%h/.config/finity/env
+WorkingDirectory=@REPO@/solana
+Environment=PATH=@NODE_BIN@:/usr/local/bin:/usr/bin:/bin
+# Signed prices come from the relayer processes (finity-relayer@1..3); the keeper only forwards them.
+Environment=RELAYER_URLS=@RELAYER_URLS@
+ExecStart=@NODE_BIN@/pnpm -s bot
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

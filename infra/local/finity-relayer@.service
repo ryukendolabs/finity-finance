@@ -1,0 +1,16 @@
+[Unit]
+Description=Finity price relayer %i (signs reports with its own key; holds no SOL, sends nothing)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=-%h/.config/finity/env
+WorkingDirectory=@REPO@/solana
+Environment=PATH=@NODE_BIN@:/usr/local/bin:/usr/bin:/bin
+Environment=RELAYER_INDEX=%i
+ExecStart=@NODE_BIN@/pnpm -s relayer
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

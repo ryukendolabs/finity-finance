@@ -1,0 +1,20 @@
+# secrets and keys (wallet, relayer and guardian keys live in ~/.config/finity, never here)
+.env
+.env.*
+!.env.example
+*.key
+keys/
+**/*-keypair.json
+# build output
+target/
+node_modules/
+.next/
+.turbo/
+dist/
+.anchor/
+test-ledger/
+# os / editor
+.DS_Store
+.idea/
+.vscode/
+.vercel

@@ -1,0 +1,47 @@
+{
+  "name": "@finity/solana",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Finity on Solana devnet: shared TS client (IDL, PDAs, markets), loaders, keeper bot, relayers, indexer and public API.",
+  "type": "module",
+  "exports": {
+    ".": "./client/index.ts",
+    "./notify": "./notify/store.ts",
+    "./notify/deliver": "./notify/deliver.ts"
+  },
+  "scripts": {
+    "sync-idl": "cp target/idl/finity.json client/idl.json && cp target/types/finity.ts client/types.ts",
+    "seed": "tsx scripts/seed.ts",
+    "load-risk": "tsx scripts/load-risk.ts",
+    "load-pool": "tsx scripts/load-pool.ts",
+    "load-oracle": "tsx scripts/load-oracle.ts",
+    "bot": "tsx scripts/bot.ts",
+    "smoke": "tsx scripts/smoke.ts",
+    "typecheck": "tsc --noEmit",
+    "relayer": "tsx scripts/relayer.ts",
+    "indexer": "tsx scripts/indexer.ts",
+    "api": "tsx scripts/api.ts",
+    "handover": "tsx scripts/handover-squads.ts",
+    "e2e": "tsx scripts/e2e.ts"
+  },
+  "dependencies": {
+    "@anchor-lang/core": "1.2.2",
+    "@hono/node-server": "1.13.8",
+    "@noble/hashes": "1.8.0",
+    "@solana/spl-token": "0.4.15",
+    "@solana/web3.js": "1.99.0",
+    "@sqds/multisig": "2.1.3",
+    "better-sqlite3": "12.11.1",
+    "hono": "4.6.20",
+    "nodemailer": "6.10.0",
+    "web-push": "3.6.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13",
+    "@types/node": "^22",
+    "@types/nodemailer": "6.4.17",
+    "@types/web-push": "3.6.4",
+    "tsx": "4.23.15",
+    "typescript": "~6.0.0"
+  }
+}

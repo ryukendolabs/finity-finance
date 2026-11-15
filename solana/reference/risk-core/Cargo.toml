@@ -1,0 +1,16 @@
+[package]
+name = "finity-risk-core"
+description = "Finity Finance reference risk math (no_std, fixed point). The on-chain program ports it and its tests require identical results."
+edition = "2021"
+version = "0.1.0"
+license = "MIT"
+
+[features]
+default = []
+std = []
+
+[dependencies]
+alloy-primitives = { version = "1.7.3", default-features = false }
+
+[dev-dependencies]
+proptest = "1.11"

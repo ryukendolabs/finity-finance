@@ -1,0 +1,15 @@
+[Unit]
+Description=Finity indexer (transactions, prices, clock transitions, auctions, pool NAV → SQLite)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=-%h/.config/finity/env
+WorkingDirectory=@REPO@/solana
+Environment=PATH=@NODE_BIN@:/usr/local/bin:/usr/bin:/bin
+ExecStart=@NODE_BIN@/pnpm -s indexer
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

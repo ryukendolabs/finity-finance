@@ -1,0 +1,18 @@
+[Unit]
+Description=Finity web app (Next.js, Solana devnet) on port @PORT@
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Private settings such as SOLANA_RPC_URL (a QuickNode endpoint); optional, never committed.
+EnvironmentFile=-%h/.config/finity/env
+WorkingDirectory=@REPO@/apps/web
+Environment=PATH=@NODE_BIN@:/usr/local/bin:/usr/bin:/bin
+Environment=PORT=@PORT@
+Environment=NODE_ENV=production
+ExecStart=@NODE_BIN@/pnpm -s start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

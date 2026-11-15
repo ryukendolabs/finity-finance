@@ -1,0 +1,6 @@
+# Pinned toolchain (asdf / mise) for Finity on Solana.
+rust 1.95.0
+solana 3.1.10
+anchor 1.1.2
+nodejs 24
+pnpm 10

@@ -1,0 +1,17 @@
+[Unit]
+Description=Finity public API on 127.0.0.1:@API_PORT@ (read-only; /v1/openapi.json, /v1/health, /metrics)
+After=network-online.target finity-indexer.service
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=-%h/.config/finity/env
+WorkingDirectory=@REPO@/solana
+Environment=PATH=@NODE_BIN@:/usr/local/bin:/usr/bin:/bin
+Environment=PORT=@API_PORT@
+Environment=RELAYER_URLS=@RELAYER_URLS@
+ExecStart=@NODE_BIN@/pnpm -s api
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
