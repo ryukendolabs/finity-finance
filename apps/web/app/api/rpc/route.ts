@@ -28,11 +28,25 @@ function limited(client: string): boolean {
   const now = Date.now();
   const b = buckets.get(client);
   if (!b || now >= b.reset) {
-    if (buckets.size > 10_000) buckets.clear();
+    // Drop only expired windows, so a flood of new keys can't wipe everyone else's count.
+    if (buckets.size > 10_000) for (const [k, v] of buckets) if (now >= v.reset) buckets.delete(k);
     buckets.set(client, { n: 1, reset: now + 60_000 });
     return false;
   }
   return ++b.n > RATE_PER_MIN;
+}
+
+/**
+ * The client's address as the platform saw it. Vercel sets x-real-ip itself (a client can't forge it); behind
+ * another proxy, the right-most X-Forwarded-For entry is the one that proxy added. Run locally with neither, every
+ * request shares one bucket.
+ */
+function clientOf(req: Request): string {
+  const real = req.headers.get("x-real-ip");
+  if (real) return real.trim();
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",").at(-1)!.trim();
+  return "local";
 }
 
 const PROGRAM = PROGRAM_ID.toBase58();
@@ -52,8 +66,7 @@ export async function POST(req: Request) {
   const origin = req.headers.get("origin");
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   if (origin && host && new URL(origin).host !== host) return deny("cross-origin requests are not allowed", 403);
-  const client = (req.headers.get("x-forwarded-for")?.split(",")[0] ?? req.headers.get("x-real-ip") ?? "local").trim();
-  if (limited(client)) return deny("rate limited", 429);
+  if (limited(clientOf(req))) return deny("rate limited", 429);
   const body = (await req.json().catch(() => null)) as RpcCall | RpcCall[] | null;
   const calls = Array.isArray(body) ? body : body ? [body] : [];
   if (!calls.length || calls.length > MAX_BATCH || !calls.every(allowed)) return deny("method not allowed");

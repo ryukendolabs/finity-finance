@@ -72,14 +72,19 @@ export function store(): Database.Database {
       primary key (alert_id, kind)
     );
   `);
-  // Older inboxes: nonces are bound to the wallet and the exact message they were issued with.
-  for (const col of ["wallet text", "message text"]) {
+  // Older inboxes: nonces are bound to the wallet and the exact message they were issued with; pending codes keep
+  // a running failure count and send history that a resend doesn't reset.
+  for (const [table, col] of [
+    ["nonces", "wallet text"], ["nonces", "message text"],
+    ["channel_pending", "last_sent integer not null default 0"], ["channel_pending", "failures_since integer not null default 0"],
+  ]) {
     try {
-      db.exec(`alter table nonces add column ${col}`);
+      db.exec(`alter table ${table} add column ${col}`);
     } catch {
       /* already there */
     }
   }
+  db.exec("create table if not exists code_sends (wallet text not null, target text not null, at integer not null)");
   return db;
 }
 
@@ -174,14 +179,43 @@ export function recordDelivery(alertId: number, kind: ChannelKind, status: strin
 
 const CODE_TTL_MS = 15 * 60_000;
 const MAX_ATTEMPTS = 5;
+const RESEND_COOLDOWN_MS = 60_000;
+const SENDS_PER_HOUR = 5;
+const FAILURE_WINDOW_MS = 24 * 3600_000;
+const MAX_FAILURES = 10;
 
-/** Records a target waiting for confirmation and returns the 6-digit code to send there. */
+/**
+ * Whether a new code may be sent: one a minute per wallet and channel, five an hour per wallet and per target, and
+ * none for a day after ten wrong codes (the failure count survives resends). Returns the reason when not.
+ */
+export function canSendCode(wallet: string, kind: ChannelKind, target: string): string | null {
+  const s = store();
+  const now = Date.now();
+  const p = s.prepare("select attempts, last_sent, failures_since from channel_pending where wallet = ? and kind = ?").get(wallet, kind) as
+    | { attempts: number; last_sent: number; failures_since: number }
+    | undefined;
+  if (p && now - p.last_sent < RESEND_COOLDOWN_MS) return "Wait a minute before asking for another code.";
+  if (p && p.attempts >= MAX_FAILURES && now - p.failures_since < FAILURE_WINDOW_MS) return "Too many wrong codes; try again tomorrow.";
+  s.prepare("delete from code_sends where at < ?").run(now - 3600_000);
+  const byWallet = (s.prepare("select count(*) n from code_sends where wallet = ?").get(wallet) as { n: number }).n;
+  const byTarget = (s.prepare("select count(*) n from code_sends where target = ?").get(target) as { n: number }).n;
+  if (byWallet >= SENDS_PER_HOUR || byTarget >= SENDS_PER_HOUR) return "Too many codes this hour; try again later.";
+  return null;
+}
+
+/** Records a target waiting for confirmation with the code that was sent there. */
 export function startPending(wallet: string, kind: ChannelKind, target: string, code: string) {
-  store()
-    .prepare(
-      "insert into channel_pending (wallet, kind, target, code, attempts, created_at) values (?, ?, ?, ?, 0, ?) on conflict (wallet, kind) do update set target = excluded.target, code = excluded.code, attempts = 0, created_at = excluded.created_at",
-    )
-    .run(wallet, kind, target, code, Date.now());
+  const s = store();
+  const now = Date.now();
+  s.prepare("insert into code_sends (wallet, target, at) values (?, ?, ?)").run(wallet, target, now);
+  // A resend replaces the code but keeps the failure count (reset only once its 24-hour window has passed).
+  s.prepare(
+    `insert into channel_pending (wallet, kind, target, code, attempts, created_at, last_sent, failures_since) values (?, ?, ?, ?, 0, ?, ?, ?)
+     on conflict (wallet, kind) do update set target = excluded.target, code = excluded.code, created_at = excluded.created_at,
+       last_sent = excluded.last_sent,
+       attempts = case when ? - channel_pending.failures_since >= ? then 0 else channel_pending.attempts end,
+       failures_since = case when ? - channel_pending.failures_since >= ? then excluded.failures_since else channel_pending.failures_since end`,
+  ).run(wallet, kind, target, code, now, now, now, now, FAILURE_WINDOW_MS, now, FAILURE_WINDOW_MS);
 }
 
 export function pendingChannel(wallet: string, kind: ChannelKind): { target: string } | null {
@@ -197,7 +231,7 @@ export function confirmPending(wallet: string, kind: ChannelKind, code: string):
   const r = s.prepare("select target, code, attempts, created_at from channel_pending where wallet = ? and kind = ?").get(wallet, kind) as
     | { target: string; code: string; attempts: number; created_at: number }
     | undefined;
-  if (!r || Date.now() - r.created_at >= CODE_TTL_MS || r.attempts >= MAX_ATTEMPTS) return "expired";
+  if (!r || Date.now() - r.created_at >= CODE_TTL_MS || r.attempts >= MAX_ATTEMPTS * 2) return "expired";
   if (r.code !== code) {
     s.prepare("update channel_pending set attempts = attempts + 1 where wallet = ? and kind = ?").run(wallet, kind);
     return "wrong";

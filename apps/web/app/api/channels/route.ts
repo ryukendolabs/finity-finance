@@ -1,7 +1,7 @@
 import { randomInt } from "node:crypto";
 import { channelSupport, isPushEndpoint, sendTo, vapidKeys } from "@finity/solana/notify/deliver";
 import {
-  CHANNEL_KINDS, channels, confirmPending, pendingChannel, removeChannel, setChannel, startPending, type ChannelKind,
+  CHANNEL_KINDS, canSendCode, channels, confirmPending, pendingChannel, removeChannel, setChannel, startPending, type ChannelKind,
 } from "@finity/solana/notify";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -58,11 +58,15 @@ export async function POST(req: Request) {
     setChannel(wallet, kind, target);
     return NextResponse.json({ ok: true });
   }
+  const refused = canSendCode(wallet, kind, target);
+  if (refused) return NextResponse.json({ error: refused }, { status: 429 });
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   try {
     await sendTo(kind, target, "Your Finity confirmation code", `Your code is ${code}. Enter it in Finity's Settings within 15 minutes to turn on ${kind} alerts. If you didn't ask for this, ignore it.`);
   } catch (e) {
-    return NextResponse.json({ error: `Couldn't send the code: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 });
+    // Details stay in the server log; the browser only learns that sending failed.
+    console.error(`channels: sending a ${kind} code failed:`, e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: kind === "email" || kind === "telegram" ? `Couldn't send the code by ${kind}. Check the address, or try later.` : "Couldn't send the code." }, { status: 502 });
   }
   startPending(wallet, kind, target, code);
   return NextResponse.json({ pending: true });
