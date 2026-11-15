@@ -1,5 +1,6 @@
 # Finity Finance
-<img alt="Finity Finance dashboard" src="apps/web/public/landing/dashboard-1600.png" />
+<img width="2852" height="1570" alt="Screenshot from 2026-11-16 01-48-57" src="https://github.com/user-attachments/assets/d676fea5-8ca4-4347-a47d-b5f93eca9db7" />
+
 
 A lending protocol on Solana for tokenized stocks and tokenized Treasury funds that follows each asset's market clock.
 
