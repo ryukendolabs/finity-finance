@@ -1,7 +1,7 @@
 import { randomInt } from "node:crypto";
 import { channelSupport, isPushEndpoint, sendTo, vapidKeys } from "@finity/solana/notify/deliver";
 import {
-  CHANNEL_KINDS, canSendCode, channels, confirmPending, pendingChannel, removeChannel, setChannel, startPending, type ChannelKind,
+  CHANNEL_KINDS, channels, confirmPending, dropPendingCode, pendingChannel, removeChannel, reserveCode, setChannel, type ChannelKind,
 } from "@finity/solana/notify";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -27,7 +27,8 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,}$/i;
 const CHAT_ID = /^-?\d{4,20}$/;
 
 function valid(kind: ChannelKind, target: unknown): string | null {
-  if (kind === "email") return typeof target === "string" && EMAIL.test(target.trim()) ? target.trim() : null;
+  // Normalised (trimmed, lower case) so the per-address limits can't be dodged with lookalikes.
+  if (kind === "email") return typeof target === "string" && EMAIL.test(target.trim()) ? target.trim().toLowerCase() : null;
   if (kind === "telegram") return typeof target === "string" && CHAT_ID.test(target.trim()) ? target.trim() : null;
   // A PushSubscription: an https endpoint and its keys.
   const s = target as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } } | null;
@@ -58,17 +59,17 @@ export async function POST(req: Request) {
     setChannel(wallet, kind, target);
     return NextResponse.json({ ok: true });
   }
-  const refused = canSendCode(wallet, kind, target);
-  if (refused) return NextResponse.json({ error: refused }, { status: 429 });
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  const refused = reserveCode(wallet, kind, target, code); // limits checked and the send recorded in one step
+  if (refused) return NextResponse.json({ error: refused }, { status: 429 });
   try {
     await sendTo(kind, target, "Your Finity confirmation code", `Your code is ${code}. Enter it in Finity's Settings within 15 minutes to turn on ${kind} alerts. If you didn't ask for this, ignore it.`);
   } catch (e) {
     // Details stay in the server log; the browser only learns that sending failed.
     console.error(`channels: sending a ${kind} code failed:`, e instanceof Error ? e.message : e);
+    dropPendingCode(wallet, kind);
     return NextResponse.json({ error: kind === "email" || kind === "telegram" ? `Couldn't send the code by ${kind}. Check the address, or try later.` : "Couldn't send the code." }, { status: 502 });
   }
-  startPending(wallet, kind, target, code);
   return NextResponse.json({ pending: true });
 }
 

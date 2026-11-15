@@ -203,8 +203,25 @@ export function canSendCode(wallet: string, kind: ChannelKind, target: string): 
   return null;
 }
 
+/**
+ * Atomically checks the limits and, when allowed, records the send and the new code (before anything is sent, so
+ * concurrent requests can't both pass the check). Returns the reason when refused, null when reserved.
+ */
+export function reserveCode(wallet: string, kind: ChannelKind, target: string, code: string): string | null {
+  return store().transaction(() => {
+    const refused = canSendCode(wallet, kind, target);
+    if (!refused) startPending(wallet, kind, target, code);
+    return refused;
+  }).immediate();
+}
+
+/** A code that couldn't be sent is dropped (the send still counts against the limits). */
+export function dropPendingCode(wallet: string, kind: ChannelKind) {
+  store().prepare("update channel_pending set code = '' , created_at = 0 where wallet = ? and kind = ?").run(wallet, kind);
+}
+
 /** Records a target waiting for confirmation with the code that was sent there. */
-export function startPending(wallet: string, kind: ChannelKind, target: string, code: string) {
+function startPending(wallet: string, kind: ChannelKind, target: string, code: string) {
   const s = store();
   const now = Date.now();
   s.prepare("insert into code_sends (wallet, target, at) values (?, ?, ?)").run(wallet, target, now);

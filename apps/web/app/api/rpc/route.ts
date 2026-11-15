@@ -24,12 +24,18 @@ const MAX_BATCH = 10;
 /** Requests per client per minute (a page load plus its polling stays well under). */
 const RATE_PER_MIN = 600;
 const buckets = new Map<string, { n: number; reset: number }>();
+const MAX_CLIENTS = 10_000;
+/** Set where a trusted proxy writes the client address (TRUST_PROXY_HEADERS=1 on Vercel); otherwise those headers
+ *  are client-controlled and ignored. */
+const TRUST_PROXY = process.env.TRUST_PROXY_HEADERS === "1" || process.env.VERCEL === "1";
 function limited(client: string): boolean {
   const now = Date.now();
   const b = buckets.get(client);
   if (!b || now >= b.reset) {
-    // Drop only expired windows, so a flood of new keys can't wipe everyone else's count.
-    if (buckets.size > 10_000) for (const [k, v] of buckets) if (now >= v.reset) buckets.delete(k);
+    // Drop only expired windows, so a flood of new keys can't wipe everyone else's count; past a hard cap, new
+    // clients wait until windows expire instead of growing memory.
+    if (buckets.size >= MAX_CLIENTS) for (const [k, v] of buckets) if (now >= v.reset) buckets.delete(k);
+    if (buckets.size >= MAX_CLIENTS) return true;
     buckets.set(client, { n: 1, reset: now + 60_000 });
     return false;
   }
@@ -37,11 +43,11 @@ function limited(client: string): boolean {
 }
 
 /**
- * The client's address as the platform saw it. Vercel sets x-real-ip itself (a client can't forge it); behind
- * another proxy, the right-most X-Forwarded-For entry is the one that proxy added. Run locally with neither, every
- * request shares one bucket.
+ * The client's address as the platform saw it. Only behind a trusted proxy (Vercel sets x-real-ip itself; another
+ * proxy adds the right-most X-Forwarded-For entry); without one, every request shares one bucket.
  */
 function clientOf(req: Request): string {
+  if (!TRUST_PROXY) return "local";
   const real = req.headers.get("x-real-ip");
   if (real) return real.trim();
   const xff = req.headers.get("x-forwarded-for");
