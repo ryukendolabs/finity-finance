@@ -25,21 +25,28 @@ const MAX_BATCH = 10;
 const RATE_PER_MIN = 600;
 const buckets = new Map<string, { n: number; reset: number }>();
 const MAX_CLIENTS = 10_000;
+const OVERFLOW = "overflow";
+const OVERFLOW_PER_MIN = RATE_PER_MIN * 20;
 /** Set where a trusted proxy writes the client address (TRUST_PROXY_HEADERS=1 on Vercel); otherwise those headers
  *  are client-controlled and ignored. */
 const TRUST_PROXY = process.env.TRUST_PROXY_HEADERS === "1" || process.env.VERCEL === "1";
-function limited(client: string): boolean {
+function limited(clientKey: string): boolean {
   const now = Date.now();
-  const b = buckets.get(client);
+  let client = clientKey;
+  let b = buckets.get(client);
   if (!b || now >= b.reset) {
-    // Drop only expired windows, so a flood of new keys can't wipe everyone else's count; past a hard cap, new
-    // clients wait until windows expire instead of growing memory.
+    // Drop only expired windows, so a flood of new keys can't wipe everyone else's count. Past a hard cap, new
+    // clients share one overflow bucket with its own (larger) limit: memory stays bounded and nobody is locked out.
     if (buckets.size >= MAX_CLIENTS) for (const [k, v] of buckets) if (now >= v.reset) buckets.delete(k);
-    if (buckets.size >= MAX_CLIENTS) return true;
+    if (buckets.size >= MAX_CLIENTS && client !== OVERFLOW) {
+      client = OVERFLOW;
+      b = buckets.get(OVERFLOW);
+      if (b && now < b.reset) return ++b.n > OVERFLOW_PER_MIN;
+    }
     buckets.set(client, { n: 1, reset: now + 60_000 });
     return false;
   }
-  return ++b.n > RATE_PER_MIN;
+  return ++b.n > (client === OVERFLOW ? OVERFLOW_PER_MIN : RATE_PER_MIN);
 }
 
 /**
@@ -48,11 +55,16 @@ function limited(client: string): boolean {
  */
 function clientOf(req: Request): string {
   if (!TRUST_PROXY) return "local";
-  const real = req.headers.get("x-real-ip");
-  if (real) return real.trim();
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",").at(-1)!.trim();
-  return "local";
+  const real = req.headers.get("x-real-ip")?.trim() || req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+  return real ? group(real) : "local";
+}
+
+/** IPv6 clients count per /64 (one host can hold a whole /64), IPv4 per address. */
+function group(ip: string): string {
+  if (!ip.includes(":")) return ip;
+  const [head] = ip.split("::");
+  const parts = ip.includes("::") ? (head ? head.split(":") : []) : ip.split(":");
+  return `${[...parts, "0", "0", "0", "0"].slice(0, 4).join(":")}::/64`;
 }
 
 const PROGRAM = PROGRAM_ID.toBase58();
