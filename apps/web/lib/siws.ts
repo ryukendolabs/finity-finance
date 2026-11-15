@@ -72,14 +72,25 @@ export async function markRead(ids: number[] | "all") {
 // ───────────── delivery channels (email, Telegram, browser push) ─────────────
 
 export type ChannelKind = "email" | "telegram" | "webpush";
-export type Channels = { channels: { kind: ChannelKind; target: string }[]; support: Record<ChannelKind, boolean>; vapidPublicKey: string };
+export type Channels = {
+  channels: { kind: ChannelKind; target: string }[];
+  /** Email / Telegram targets waiting for their confirmation code. */
+  pending: { kind: ChannelKind; target: string }[];
+  support: Record<ChannelKind, boolean>;
+  vapidPublicKey: string;
+};
 
 export function useChannels(signedIn: boolean) {
   return useQuery({ queryKey: ["channels"], enabled: signedIn, queryFn: async () => json<Channels>(await fetch("/api/channels")) });
 }
 
-export async function saveChannel(kind: ChannelKind, target: unknown) {
-  await json(await fetch("/api/channels", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, target }) }));
+/** Browser push turns on at once; email / Telegram get a code sent there first (`pending: true`). */
+export async function saveChannel(kind: ChannelKind, target: unknown): Promise<{ ok?: boolean; pending?: boolean }> {
+  return json(await fetch("/api/channels", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, target }) }));
+}
+
+export async function confirmChannel(kind: ChannelKind, code: string) {
+  await json(await fetch("/api/channels", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, code }) }));
 }
 
 export async function deleteChannel(kind: ChannelKind) {

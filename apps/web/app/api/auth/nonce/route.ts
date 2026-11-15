@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid wallet" }, { status: 400 });
   }
   const nonce = randomBytes(16).toString("hex");
-  issueNonce(nonce);
-  return NextResponse.json({ nonce, message: signInMessage(wallet, nonce, new Date().toISOString()) });
+  const message = signInMessage(wallet, nonce, new Date().toISOString());
+  issueNonce(nonce, wallet, message); // only this exact message, for this wallet, can be signed in with
+  return NextResponse.json({ nonce, message });
 }

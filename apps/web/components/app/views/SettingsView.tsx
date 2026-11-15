@@ -7,7 +7,7 @@ import { ConnectNote } from "./shared";
 import { useApp } from "@/lib/app";
 import { CLUSTER_NAME, ticker } from "@/lib/protocol";
 import { autoCoverIx, humanError, useAutoCover, useProgram, useSend, type Position } from "@/lib/solana";
-import { deleteChannel, saveChannel, subscribePush, unsubscribePush, useChannels, useSiws, type ChannelKind } from "@/lib/siws";
+import { confirmChannel, deleteChannel, saveChannel, subscribePush, unsubscribePush, useChannels, useSiws, type ChannelKind } from "@/lib/siws";
 import { useQueryClient } from "@tanstack/react-query";
 
 const CHANNEL_LABEL: Record<ChannelKind, string> = { webpush: "Browser notifications", email: "Email", telegram: "Telegram" };
@@ -38,6 +38,7 @@ function Notifications() {
   }
   const data = q.data;
   const on = (k: ChannelKind) => data?.channels.find((c) => c.kind === k);
+  const waiting = (k: ChannelKind) => data?.pending.find((c) => c.kind === k);
   const run = async (k: ChannelKind, f: () => Promise<void>) => {
     setError(null);
     setBusy(k);
@@ -78,13 +79,35 @@ function Notifications() {
                     } else {
                       const v = (draft[k] ?? "").trim();
                       if (!v) throw new Error(k === "email" ? "Enter your email address first." : "Enter your Telegram chat id first.");
-                      await saveChannel(k, v);
+                      await saveChannel(k, v); // sends a code; the channel turns on once it is confirmed
                     }
                   })
                 }
               />
             </label>
-            {!current && k !== "webpush" && supported && (
+            {!current && waiting(k) && (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <input
+                  className="cx-text-input"
+                  style={{ marginTop: 0 }}
+                  inputMode="numeric"
+                  maxLength={6}
+                  aria-label={`Confirmation code sent to ${waiting(k)!.target}`}
+                  placeholder={`Code sent to ${waiting(k)!.target}`}
+                  value={draft[`${k}-code`] ?? ""}
+                  onChange={(e) => setDraft({ ...draft, [`${k}-code`]: e.target.value.replace(/\D/g, "") })}
+                />
+                <button
+                  type="button"
+                  className="cx-btn"
+                  aria-disabled={busy !== null || undefined}
+                  onClick={() => busy === null && run(k, () => confirmChannel(k, draft[`${k}-code`] ?? ""))}
+                >
+                  Confirm
+                </button>
+              </div>
+            )}
+            {!current && !waiting(k) && k !== "webpush" && supported && (
               <input
                 className="cx-text-input"
                 aria-label={k === "email" ? "Email address for alerts" : "Telegram chat id for alerts"}

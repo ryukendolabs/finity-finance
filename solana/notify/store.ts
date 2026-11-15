@@ -53,6 +53,17 @@ export function store(): Database.Database {
       primary key (wallet, kind)
     );
     -- One row per alert and channel tried, so a delivery is attempted once (status: sent | failed: reason).
+    -- An email address or Telegram chat waiting for its confirmation code (the channel turns on only once the code
+    -- sent there comes back).
+    create table if not exists channel_pending (
+      wallet text not null,
+      kind text not null,
+      target text not null,
+      code text not null,
+      attempts integer not null default 0,
+      created_at integer not null,
+      primary key (wallet, kind)
+    );
     create table if not exists deliveries (
       alert_id integer not null,
       kind text not null,
@@ -61,6 +72,14 @@ export function store(): Database.Database {
       primary key (alert_id, kind)
     );
   `);
+  // Older inboxes: nonces are bound to the wallet and the exact message they were issued with.
+  for (const col of ["wallet text", "message text"]) {
+    try {
+      db.exec(`alter table nonces add column ${col}`);
+    } catch {
+      /* already there */
+    }
+  }
   return db;
 }
 
@@ -88,13 +107,22 @@ export function markRead(wallet: string, ids: number[] | "all") {
   else for (const id of ids) store().prepare("update alerts set read = 1 where wallet = ? and id = ?").run(wallet, id);
 }
 
-/** One-time sign-in nonces (5-minute lifetime). */
-export function issueNonce(nonce: string) {
+/** One-time sign-in nonces (5-minute lifetime), bound to the wallet and the exact message issued with them. */
+export function issueNonce(nonce: string, wallet: string, message: string) {
   const s = store();
   s.prepare("delete from nonces where created_at < ?").run(Date.now() - 5 * 60_000);
-  s.prepare("insert into nonces (nonce, created_at) values (?, ?)").run(nonce, Date.now());
+  s.prepare("insert into nonces (nonce, created_at, wallet, message) values (?, ?, ?, ?)").run(nonce, Date.now(), wallet, message);
 }
 
+/** The live nonce's wallet and message (without using it up). */
+export function peekNonce(nonce: string): { wallet: string; message: string } | null {
+  const r = store().prepare("select wallet, message from nonces where nonce = ? and created_at >= ?").get(nonce, Date.now() - 5 * 60_000) as
+    | { wallet: string | null; message: string | null }
+    | undefined;
+  return r?.wallet && r.message ? { wallet: r.wallet, message: r.message } : null;
+}
+
+/** Uses the nonce up; false if it was already used or expired. */
 export function consumeNonce(nonce: string): boolean {
   const r = store().prepare("delete from nonces where nonce = ? and created_at >= ?").run(nonce, Date.now() - 5 * 60_000);
   return r.changes > 0;
@@ -140,4 +168,41 @@ export function pendingDeliveries(limit = 50): { alert: Alert; kind: ChannelKind
 
 export function recordDelivery(alertId: number, kind: ChannelKind, status: string) {
   store().prepare("insert or replace into deliveries (alert_id, kind, status, at) values (?, ?, ?, ?)").run(alertId, kind, status.slice(0, 200), Date.now());
+}
+
+// ───────────── confirming an email address or Telegram chat ─────────────
+
+const CODE_TTL_MS = 15 * 60_000;
+const MAX_ATTEMPTS = 5;
+
+/** Records a target waiting for confirmation and returns the 6-digit code to send there. */
+export function startPending(wallet: string, kind: ChannelKind, target: string, code: string) {
+  store()
+    .prepare(
+      "insert into channel_pending (wallet, kind, target, code, attempts, created_at) values (?, ?, ?, ?, 0, ?) on conflict (wallet, kind) do update set target = excluded.target, code = excluded.code, attempts = 0, created_at = excluded.created_at",
+    )
+    .run(wallet, kind, target, code, Date.now());
+}
+
+export function pendingChannel(wallet: string, kind: ChannelKind): { target: string } | null {
+  const r = store().prepare("select target, created_at from channel_pending where wallet = ? and kind = ?").get(wallet, kind) as
+    | { target: string; created_at: number }
+    | undefined;
+  return r && Date.now() - r.created_at < CODE_TTL_MS ? { target: r.target } : null;
+}
+
+/** Checks a code; on a match the channel turns on. Codes expire after 15 minutes and allow 5 attempts. */
+export function confirmPending(wallet: string, kind: ChannelKind, code: string): "ok" | "wrong" | "expired" {
+  const s = store();
+  const r = s.prepare("select target, code, attempts, created_at from channel_pending where wallet = ? and kind = ?").get(wallet, kind) as
+    | { target: string; code: string; attempts: number; created_at: number }
+    | undefined;
+  if (!r || Date.now() - r.created_at >= CODE_TTL_MS || r.attempts >= MAX_ATTEMPTS) return "expired";
+  if (r.code !== code) {
+    s.prepare("update channel_pending set attempts = attempts + 1 where wallet = ? and kind = ?").run(wallet, kind);
+    return "wrong";
+  }
+  s.prepare("delete from channel_pending where wallet = ? and kind = ?").run(wallet, kind);
+  setChannel(wallet, kind, r.target);
+  return "ok";
 }

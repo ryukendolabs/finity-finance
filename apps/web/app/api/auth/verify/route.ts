@@ -1,4 +1,4 @@
-import { consumeNonce } from "@finity/solana/notify";
+import { consumeNonce, peekNonce } from "@finity/solana/notify";
 import { ed25519 } from "@noble/curves/ed25519";
 import { PublicKey } from "@solana/web3.js";
 import { NextResponse } from "next/server";
@@ -14,12 +14,20 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "invalid wallet" }, { status: 400 });
   }
-  const lines = body.message.split("\n");
-  const field = (k: string) => lines.find((l) => l.startsWith(`${k}: `))?.slice(k.length + 2);
-  if (field("Wallet") !== pk.toBase58()) return NextResponse.json({ error: "message is for another wallet" }, { status: 400 });
-  const ok = ed25519.verify(Buffer.from(body.signature, "base64"), new TextEncoder().encode(body.message), pk.toBytes());
+  // The message must be exactly the one issued with its nonce, for this wallet (not just a lookalike).
+  const nonce = /^Nonce: ([0-9a-f]{32})$/m.exec(body.message)?.[1] ?? "";
+  const issued = peekNonce(nonce);
+  if (!issued || issued.wallet !== pk.toBase58() || issued.message !== body.message) {
+    return NextResponse.json({ error: "expired or unknown sign-in message" }, { status: 401 });
+  }
+  let ok = false;
+  try {
+    ok = ed25519.verify(Buffer.from(body.signature, "base64"), new TextEncoder().encode(issued.message), pk.toBytes());
+  } catch {
+    ok = false;
+  }
   if (!ok) return NextResponse.json({ error: "bad signature" }, { status: 401 });
-  if (!consumeNonce(field("Nonce") ?? "")) return NextResponse.json({ error: "expired or reused sign-in" }, { status: 401 });
+  if (!consumeNonce(nonce)) return NextResponse.json({ error: "expired or reused sign-in" }, { status: 401 });
   const s = issue(pk.toBase58());
   const res = NextResponse.json({ wallet: pk.toBase58() });
   res.cookies.set(COOKIE, s.value, { httpOnly: true, sameSite: "strict", path: "/", maxAge: s.maxAge, secure: req.url.startsWith("https") });

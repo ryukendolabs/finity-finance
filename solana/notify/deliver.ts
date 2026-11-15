@@ -29,6 +29,21 @@ export function channelSupport(): Record<ChannelKind, boolean> {
   return { email: !!process.env.SMTP_URL, telegram: !!process.env.TELEGRAM_BOT_TOKEN, webpush: true };
 }
 
+/** Browser push services a subscription may point at (anything else is refused: no requests to arbitrary hosts). */
+const PUSH_HOSTS = [
+  /^fcm\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /^[a-z0-9-]+\.push\.services\.mozilla\.com$/,
+  /^[a-z0-9-]+\.notify\.windows\.com$/, /^web\.push\.apple\.com$/, /^[a-z0-9-]+\.push\.apple\.com$/,
+];
+export function isPushEndpoint(endpoint: unknown): boolean {
+  if (typeof endpoint !== "string") return false;
+  try {
+    const u = new URL(endpoint);
+    return u.protocol === "https:" && !u.port && !u.username && PUSH_HOSTS.some((h) => h.test(u.hostname));
+  } catch {
+    return false;
+  }
+}
+
 let mailer: nodemailer.Transporter | null = null;
 const link = (a: Alert) => (a.url ? `${APP_URL}${a.url}` : APP_URL);
 
@@ -50,10 +65,18 @@ async function send(kind: ChannelKind, target: string, a: Alert): Promise<void> 
     });
     if (!res.ok) throw new Error(`telegram ${res.status}: ${(await res.text()).slice(0, 120)}`);
   } else {
+    const sub = JSON.parse(target) as { endpoint?: unknown };
+    if (!isPushEndpoint(sub.endpoint)) throw new Error("push endpoint is not a known push service");
     const v = vapidKeys();
     webpush.setVapidDetails(APP_URL.startsWith("https") ? APP_URL : "mailto:alerts@localhost", v.publicKey, v.privateKey);
     await webpush.sendNotification(JSON.parse(target), JSON.stringify({ title: a.subject, body: a.body, url: a.url ?? "/app/alerts" }), { TTL: 3600 });
   }
+}
+
+/** Sends a one-off message (a confirmation code) on a channel. */
+export async function sendTo(kind: ChannelKind, target: string, subject: string, body: string) {
+  if (!channelSupport()[kind]) throw new Error(`${kind} is not set up on this server`);
+  await send(kind, target, { id: 0, wallet: "", event: "CONFIRM", subject, body, url: "/app/settings", createdAt: Date.now(), read: false });
 }
 
 /** Delivers every pending alert on every channel it supports; returns how many went out. */
