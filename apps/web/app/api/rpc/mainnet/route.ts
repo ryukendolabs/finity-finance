@@ -1,4 +1,5 @@
 import { V2_PROGRAM_ID } from "@finity/solana/v2";
+import { ComputeBudgetProgram, SystemProgram } from "@solana/web3.js";
 
 import { rpcProxy } from "@/lib/rpcProxy";
 
@@ -15,6 +16,10 @@ const proxy = rpcProxy({
     "simulateTransaction", "getSlot", "getBlockHeight", "getHealth", "isBlockhashValid",
   ]),
   programs: [V2_PROGRAM_ID.toBase58()],
+  // Only V2 transactions, plus the createAccount (owned by V2) and compute-budget instructions they carry.
+  txPrograms: [V2_PROGRAM_ID.toBase58(), SystemProgram.programId.toBase58(), ComputeBudgetProgram.programId.toBase58()],
+  createOwner: V2_PROGRAM_ID.toBase58(),
+  requireOrigin: true,
 });
 
 export async function POST(req: Request) {

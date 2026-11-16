@@ -384,7 +384,10 @@ fn set_position(
     }
     wr(d, P_COLL, coll.to_le_bytes());
     wr(d, P_DEBT, debt.to_le_bytes());
-    d[P_FLAG] = 0;
+    // A Bell flag stays until the position is back within the closure-safe LTV (at the last posted price).
+    if debt == 0 || within(debt, coll, rd_u64(md, M_PRICE), rd_u16(md, M_SAFE)) {
+        d[P_FLAG] = 0;
+    }
     Ok(())
 }
 

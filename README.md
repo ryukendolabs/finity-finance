@@ -71,8 +71,8 @@ behind Sign-In With Solana, and can also go out by browser push, email or Telegr
 
 ## Mainnet
 
-**Finity V2** puts the Asset Clock and the Bell Check on Solana mainnet as a 6.6 KB program
-([`solana/v2`](solana/v2/)): deploy and seed cost ~0.043 SOL (~$3). Its keeper mirrors the devnet protocol's clock, oracle price and
+**Finity V2** puts the Asset Clock and the Bell Check on Solana mainnet as a 6.8 KB program
+([`solana/v2`](solana/v2/)): deploy and seed cost ~0.044 SOL (~$3). Its keeper mirrors the devnet protocol's clock, oracle price and
 calibrated safe LTV, and the web app's **Mainnet** page lets a wallet open, Bell-check and close positions. Costs and
 steps: [`docs/mainnet.md`](docs/mainnet.md).
 

@@ -1,6 +1,6 @@
 # Finity V2 on mainnet
 
-The full protocol keeps running on devnet. Finity V2 (`solana/v2`, a 6,664-byte Pinocchio program) puts its two
+The full protocol keeps running on devnet. Finity V2 (`solana/v2`, a 6,760-byte Pinocchio program) puts its two
 distinctive rules on Solana mainnet: each market's clock (open, extended, closed, halted, reopen; next close and
 reopen) and the Bell Check (from two hours before the close, positions must be at the closure-safe LTV). Its keeper
 mirrors the devnet program: clock state, the oracle price (2-of-3 relayer-signed and verified on devnet) and the safe
@@ -14,11 +14,11 @@ Rent is a refundable deposit; fees are 0.000005 SOL per signature. SOL figures a
 
 | Item | SOL | USD |
 |---|---|---|
-| Program data (6,664 bytes) | 0.034503 | 2.44 |
+| Program data (6,760 bytes) | 0.034991 | 2.48 |
 | Program account | 0.000833 | 0.06 |
 | Deploy fees | ~0.0003 | 0.02 |
 | 7 markets × 0.001097 | 0.007681 | 0.54 |
-| **Deploy + seed** | **~0.0434** | **~3.07** |
+| **Deploy + seed** | **~0.0438** | **~3.10** |
 | Keeper | ~0.0006 per trading day (writes only what changed: price every 4 min while open, hourly while closed) | ~0.04/day |
 
 Fund **0.05 SOL (~$3.55)**: deploy, seed and about two weeks of keeper fees. Rehearsed end to end on devnet (same

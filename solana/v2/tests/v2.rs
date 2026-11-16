@@ -205,8 +205,14 @@ fn borrow_follows_the_clock_and_the_bell() {
     // Bell check flags the position above the safe LTV...
     e.bell(&p).unwrap();
     assert_eq!(e.data(&p)[P_FLAG], 1);
-    // ...and clears it once it is safe.
+    // ...a no-op or partial repayment still above it keeps the flag...
+    e.adjust(&p, 10 * USD, 1_400 * USD).unwrap();
+    assert_eq!(e.data(&p)[P_FLAG], 1);
+    e.adjust(&p, 10 * USD, 1_300 * USD).unwrap();
+    assert_eq!(e.data(&p)[P_FLAG], 1);
+    // ...and it clears once the position is safe.
     e.adjust(&p, 10 * USD, 1_100 * USD).unwrap();
+    assert_eq!(e.data(&p)[P_FLAG], 0);
     e.bell(&p).unwrap();
     assert_eq!(e.data(&p)[P_FLAG], 0);
 

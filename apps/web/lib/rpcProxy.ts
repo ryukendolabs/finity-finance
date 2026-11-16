@@ -1,3 +1,4 @@
+import { PublicKey, SystemProgram, VersionedTransaction } from "@solana/web3.js";
 import { NextResponse } from "next/server";
 
 /**
@@ -63,11 +64,41 @@ export interface ProxyConfig {
   methods: ReadonlySet<string>;
   /** Programs getProgramAccounts may scan (always with at least one filter). */
   programs: readonly string[];
+  /** When set, sendTransaction/simulateTransaction are forwarded only if every instruction calls one of these
+   *  programs (base64 transactions only), so the upstream can't relay arbitrary transactions. */
+  txPrograms?: readonly string[];
+  /** With txPrograms: System Program instructions are allowed only as createAccount owned by this program. */
+  createOwner?: string;
+  /** Refuse requests without an Origin header (non-browser clients). */
+  requireOrigin?: boolean;
 }
 
-export function rpcProxy({ upstream, methods, programs }: ProxyConfig) {
+/** Whether every instruction of a base64 wire transaction calls an allowed program. */
+function txAllowed(params: unknown, txPrograms: readonly string[], createOwner?: string): boolean {
+  const p = Array.isArray(params) ? params : [];
+  const encoding = (p[1] as { encoding?: unknown } | undefined)?.encoding;
+  if (typeof p[0] !== "string" || encoding !== "base64") return false;
+  try {
+    const msg = VersionedTransaction.deserialize(Buffer.from(p[0], "base64")).message;
+    // Program ids are always static keys (lookup tables can't supply them).
+    const keys = msg.staticAccountKeys;
+    return msg.compiledInstructions.length > 0 && msg.compiledInstructions.every((ix) => {
+      const k = keys[ix.programIdIndex];
+      if (!k || !txPrograms.includes(k.toBase58())) return false;
+      if (!createOwner || !k.equals(SystemProgram.programId)) return true;
+      // SystemInstruction::CreateAccount = u32 0, lamports u64, space u64, owner [32].
+      const d = Buffer.from(ix.data);
+      return d.length === 52 && d.readUInt32LE(0) === 0 && new PublicKey(d.subarray(20, 52)).toBase58() === createOwner;
+    });
+  } catch {
+    return false;
+  }
+}
+
+export function rpcProxy({ upstream, methods, programs, txPrograms, createOwner, requireOrigin }: ProxyConfig) {
   const allowed = (c: RpcCall): boolean => {
     if (typeof c.method !== "string" || !methods.has(c.method)) return false;
+    if (txPrograms && (c.method === "sendTransaction" || c.method === "simulateTransaction")) return txAllowed(c.params, txPrograms, createOwner);
     if (c.method !== "getProgramAccounts") return true;
     const p = Array.isArray(c.params) ? c.params : [];
     const filters = (p[1] as { filters?: unknown } | undefined)?.filters;
@@ -78,6 +109,7 @@ export function rpcProxy({ upstream, methods, programs }: ProxyConfig) {
     // Browsers send Origin on POST: a page on another site can't use this proxy.
     const origin = req.headers.get("origin");
     const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+    if (requireOrigin && !origin) return deny("browser requests only", 403);
     if (origin && host && new URL(origin).host !== host) return deny("cross-origin requests are not allowed", 403);
     if (limited(clientOf(req))) return deny("rate limited", 429);
     const body = (await req.json().catch(() => null)) as RpcCall | RpcCall[] | null;
