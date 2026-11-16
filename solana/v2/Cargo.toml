@@ -1,0 +1,39 @@
+[workspace]
+
+[package]
+name = "finity-v2"
+version = "0.1.0"
+edition = "2021"
+description = "Finity V2: Asset Clock + Bell Check, a minimal mainnet program"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+no-entrypoint = []
+
+[dependencies]
+pinocchio = "0.12.0"
+
+[dev-dependencies]
+litesvm = "0.10.0"
+solana-address = "2.9.0"
+solana-instruction = "3.5.1"
+solana-system-interface = { version = "2.0.0", features = ["bincode"] }
+solana-clock = "3.2.1"
+solana-keypair = "3.1.2"
+solana-message = "3.1.0"
+solana-transaction = "3.1.0"
+solana-signer = "3.0.1"
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+overflow-checks = false
+panic = "abort"
+strip = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

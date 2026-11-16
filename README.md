@@ -69,6 +69,13 @@ behind Sign-In With Solana, and can also go out by browser push, email or Telegr
 | Markets | AAPL, AMZN, GOOGL, MSFT, NVDA, TSLA (NYSE calendar) and TBILL (US-bank calendar) |
 | Plan and status | [`docs/solana-devnet-migration-plan.md`](docs/solana-devnet-migration-plan.md) |
 
+## Mainnet
+
+**Finity V2** puts the Asset Clock and the Bell Check on Solana mainnet as a 6.6 KB program
+([`solana/v2`](solana/v2/)): deploy and seed cost ~0.043 SOL (~$3). Its keeper mirrors the devnet protocol's clock, oracle price and
+calibrated safe LTV, and the web app's **Mainnet** page lets a wallet open, Bell-check and close positions. Costs and
+steps: [`docs/mainnet.md`](docs/mainnet.md).
+
 ## Repository layout
 
 | Path | What it is |
@@ -76,6 +83,7 @@ behind Sign-In With Solana, and can also go out by browser push, email or Telegr
 | [`solana/programs/finity`](solana/programs/finity/) | Anchor program and its LiteSVM integration tests |
 | [`solana/reference/risk-core`](solana/reference/risk-core/) | Reference fixed-point risk math for the differential tests |
 | [`solana/data/calibration`](solana/data/calibration/) | Calendars, scenario sets, joint stress columns and σ tables loaded on-chain |
+| [`solana/v2`](solana/v2/) | Finity V2: the mainnet program (Pinocchio, no Anchor), its LiteSVM tests and `deploy.sh` |
 | [`solana/client`](solana/client/) | TypeScript client (`@finity/solana`): IDL, PDAs, markets, math ports, address book |
 | [`solana/scripts`](solana/scripts/) | Seed and loaders, keeper, relayer, indexer, API, notifier, smoke and e2e checks, devnet upgrade, multisig handover |
 | [`solana/notify`](solana/notify/) | Alert inbox (SQLite) and delivery by push, email and Telegram |

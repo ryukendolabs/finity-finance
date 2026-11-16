@@ -18,6 +18,7 @@ const NAV: NavItem[] = [
   { href: "/app/underwrite", label: "Underwrite", icon: "shield-plain" },
   { href: "/app/auctions", label: "Auctions", icon: "gavel" },
   { href: "/app/risk", label: "Risk", icon: "pie" },
+  { href: "/app/mainnet", label: "Mainnet", icon: "external" },
   { href: "/app/alerts", label: "Alerts", icon: "mail" },
 ];
 const NAV_BOTTOM: NavItem[] = [

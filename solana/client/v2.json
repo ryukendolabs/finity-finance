@@ -1,0 +1,15 @@
+{
+  "programId": "GvaQuq1tNpPHu3ZvKcxZ4dNSze59EMPBq7u3TMYyHAxx",
+  "markets": {
+    "mainnet": {},
+    "devnet": {
+      "AAPL": "9UYuVyopeRx1Doj8bNzeqQKFW1cqDS2pDG5uTSRqLFNv",
+      "AMZN": "3M5ZbZy4z71JrhC6G3JJa9v8UrM7GFtb6MSW4DeAP7XK",
+      "GOOGL": "3xswntiPzzUxGZvGNxZxtH9ipV8yepjJB7V7vp8RigPE",
+      "MSFT": "HC598FUe2HoRV7GJf1ppwcJg9vpZQvv42tALWQeg2EXa",
+      "NVDA": "9FgRqdGDKwgbRM6w8DAMCWoacScBXtTQDZMPyuhpkG3y",
+      "TSLA": "95DJv9YeCgqQb5b2YWPRSsGPA7YwafJYRggSB8vk3xGM",
+      "TBILL": "2rYh8uLT34r1Ls1VXuLhKS5QHMvLXSrErhoUhTKWfM51"
+    }
+  }
+}
