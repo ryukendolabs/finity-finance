@@ -1,6 +1,6 @@
-import { LEND_PROGRAM_ID } from "@finity/solana/lend";
+import { LEND_PROGRAM_ID, lendAddresses, type LendCluster } from "@finity/solana/lend";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { ComputeBudgetProgram, SystemProgram } from "@solana/web3.js";
+import { ComputeBudgetProgram, SystemProgram, type VersionedMessage } from "@solana/web3.js";
 
 import { rpcProxy } from "@/lib/rpcProxy";
 
@@ -10,6 +10,23 @@ import { rpcProxy } from "@/lib/rpcProxy";
  * supply the pool (USDC and xStocks: SPL Token and Token-2022). Program scans only over Lend. The upstream is the server's LEND_RPC_URL (a private mainnet
  * endpoint), else the public mainnet RPC.
  */
+const LEND = lendAddresses((process.env.LEND_CLUSTER || process.env.NEXT_PUBLIC_LEND_CLUSTER || "mainnet") as LendCluster);
+const TOKEN_PROGRAMS = new Set([TOKEN_PROGRAM_ID.toBase58(), TOKEN_2022_PROGRAM_ID.toBase58()]);
+
+/** A transaction is relayed only if it calls Lend, or moves tokens into the Lend pool (the lender's Supply): token
+ *  instructions on their own (transfers between other accounts) are not relayed. */
+function forLend(msg: VersionedMessage): boolean {
+  const keys = msg.staticAccountKeys;
+  return msg.compiledInstructions.some((ix) => {
+    const program = keys[ix.programIdIndex]?.toBase58();
+    if (program === LEND_PROGRAM_ID.toBase58()) return true;
+    if (!program || !TOKEN_PROGRAMS.has(program) || !LEND) return false;
+    // Transfer (3): source, destination, owner. TransferChecked (12): source, mint, destination, owner.
+    const dest = ix.data[0] === 3 ? ix.accountKeyIndexes[1] : ix.data[0] === 12 ? ix.accountKeyIndexes[2] : undefined;
+    return dest !== undefined && !!keys[dest]?.equals(LEND.loanVault);
+  });
+}
+
 const proxy = rpcProxy({
   upstream: process.env.LEND_RPC_URL || "https://api.mainnet-beta.solana.com",
   methods: new Set([
@@ -25,6 +42,7 @@ const proxy = rpcProxy({
     SystemProgram.programId.toBase58(), ComputeBudgetProgram.programId.toBase58(),
   ],
   createOwner: LEND_PROGRAM_ID.toBase58(),
+  txRequire: forLend,
   requireOrigin: true,
 });
 
