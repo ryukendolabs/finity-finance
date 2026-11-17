@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 /**
  * Solana JSON-RPC proxy for the browser, shared by /api/rpc (devnet, the full program) and /api/rpc/mainnet
- * (Finity V2). The upstream endpoint (e.g. a private QuickNode URL with its token) stays on the server. Only
+ * (Finity Lend). The upstream endpoint (e.g. a private QuickNode URL with its token) stays on the server. Only
  * JSON-RPC POSTs of the listed methods are forwarded, so the endpoint can't be used as a general proxy:
  * program-account scans only over the listed programs and with filters, same-origin browser requests only, at most
  * 10 calls per batch and a per-client rate limit (one limiter across both routes).
@@ -17,9 +17,9 @@ const buckets = new Map<string, { n: number; reset: number }>();
 const MAX_CLIENTS = 10_000;
 const OVERFLOW = "overflow";
 const OVERFLOW_PER_MIN = RATE_PER_MIN * 20;
-/** Set where a trusted proxy writes the client address (TRUST_PROXY_HEADERS=1 on Vercel); otherwise those headers
- *  are client-controlled and ignored. */
-const TRUST_PROXY = process.env.TRUST_PROXY_HEADERS === "1" || process.env.VERCEL === "1";
+/** Set where a trusted proxy writes the client address (TRUST_PROXY_HEADERS=1 behind the server's nginx, which sets
+ *  X-Real-IP); otherwise those headers are client-controlled and ignored. */
+const TRUST_PROXY = process.env.TRUST_PROXY_HEADERS === "1";
 function limited(clientKey: string): boolean {
   const now = Date.now();
   let client = clientKey;
@@ -40,10 +40,10 @@ function limited(clientKey: string): boolean {
 }
 
 /**
- * The client's address as the platform saw it. Only behind a trusted proxy (Vercel sets x-real-ip itself; another
- * proxy adds the right-most X-Forwarded-For entry); without one, every request shares one bucket.
+ * The client's address as the proxy saw it. Only behind a trusted proxy (nginx sets x-real-ip; another proxy adds the
+ * right-most X-Forwarded-For entry); without one, every request shares one bucket.
  */
-function clientOf(req: Request): string {
+export function clientOf(req: Request): string {
   if (!TRUST_PROXY) return "local";
   const real = req.headers.get("x-real-ip")?.trim() || req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
   return real ? group(real) : "local";

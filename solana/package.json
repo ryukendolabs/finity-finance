@@ -6,7 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./client/index.ts",
-    "./v2": "./client/v2.ts",
+    "./lend": "./client/lend.ts",
     "./notify": "./notify/store.ts",
     "./notify/deliver": "./notify/deliver.ts"
   },
@@ -24,7 +24,8 @@
     "api": "tsx scripts/api.ts",
     "handover": "tsx scripts/handover-squads.ts",
     "e2e": "tsx scripts/e2e.ts",
-    "v2": "tsx scripts/v2.ts"
+    "lend": "tsx scripts/lend.ts",
+    "reclaim": "tsx scripts/reclaim.ts"
   },
   "dependencies": {
     "@anchor-lang/core": "1.2.2",

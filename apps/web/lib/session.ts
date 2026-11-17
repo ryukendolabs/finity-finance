@@ -42,4 +42,4 @@ export function walletOf(cookie: string | undefined): string | null {
 
 /** The sign-in message the wallet signs (human-readable, single use). */
 export const signInMessage = (wallet: string, nonce: string, issued: string) =>
-  `Sign in to Finity Finance\n\nThis proves you control this wallet. It sends no transaction and costs nothing.\n\nWallet: ${wallet}\nNonce: ${nonce}\nIssued: ${issued}\nNetwork: Solana devnet`;
+  `Sign in to Finity Finance\n\nThis proves you control this wallet. It sends no transaction and costs nothing.\n\nWallet: ${wallet}\nNonce: ${nonce}\nIssued: ${issued}\nNetwork: Solana`;

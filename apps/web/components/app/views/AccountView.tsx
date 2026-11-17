@@ -6,7 +6,8 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { GradientCard, H, KV, Note, PageHead, Pill, StatBlock, num, usd } from "../ui";
 import { ConnectNote } from "./shared";
 import { useApp } from "@/lib/app";
-import { CLUSTER_NAME, explorerAddress, shortAddress } from "@/lib/protocol";
+import { lendExplorer } from "@/lib/lend";
+import { CLUSTER_NAME, shortAddress } from "@/lib/protocol";
 import { SHARE_MINT, USDC_MINT, useBalances, usePool, useSeniorVault } from "@/lib/solana";
 
 export function AccountView() {
@@ -28,13 +29,13 @@ export function AccountView() {
 
   return (
     <>
-      <PageHead title="Account" sub="Your wallet and everything it holds across Finity on Solana devnet." />
+      <PageHead title="Account" sub="Your wallet and everything it holds across Finity on Solana." />
       <div className="cx-grid">
         <div className="cx-col">
           <section>
             <H>Wallet</H>
             {!addr ? (
-              <ConnectNote>Connect a Solana wallet (Phantom, Solflare, Backpack) set to devnet.</ConnectNote>
+              <ConnectNote>Connect a Solana wallet (Phantom, Solflare, Backpack).</ConnectNote>
             ) : (
               <div className="cx-row">
                 <GradientCard
@@ -74,7 +75,7 @@ export function AccountView() {
               </section>
               <Note icon="external">
                 Every account is public on-chain.{" "}
-                <a href={explorerAddress(addr)} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>
+                <a href={lendExplorer(addr)} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>
                   See this wallet on the explorer
                 </a>
                 .

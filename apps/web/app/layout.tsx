@@ -1,11 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Manrope, Outfit } from "next/font/google";
+import { Roboto } from "next/font/google";
 import type { ReactNode } from "react";
 
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
-const inter = Inter({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-inter", display: "swap" });
-/** The dashboard typeface, used across the app. */
-const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", display: "swap" });
+/** The landing page's body typeface, used across the app (headings use Libre Caslon Condensed, see app/app.css). */
+const roboto = Roboto({ subsets: ["latin"], variable: "--font-roboto", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Finity Finance",
@@ -17,21 +15,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
-/**
- * Runs before first paint. Adds Webflow's `w-mod-js` / `w-mod-touch` classes, and `ix`, which
- * holds animated elements in their initial state until the interactions start. Users who
- * prefer reduced motion get the static page.
- */
-const bootScript = `(function(d,w){var c=d.documentElement.classList;c.add("w-mod-js");
-if("ontouchstart" in w||(w.DocumentTouch&&d instanceof w.DocumentTouch))c.add("w-mod-touch");
-if(!w.matchMedia("(prefers-reduced-motion: reduce)").matches)c.add("ix","w-mod-ix");})(document,window);`;
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${manrope.variable} ${inter.variable} ${outfit.variable}`} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: bootScript }} />
-      </head>
+    <html lang="en" className={roboto.variable} suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );

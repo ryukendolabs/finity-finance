@@ -1,0 +1,89 @@
+{
+  "programId": "He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL",
+  "clusters": {
+    "mainnet": {
+      "markets": "7wiQL1qrKVJumuYijeCMva4T2864xNsUUk3XgsM1cKHK",
+      "usdMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "mints": [
+        {
+          "symbol": "AAPLx",
+          "mint": "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",
+          "decimals": 8,
+          "program": "2022"
+        },
+        {
+          "symbol": "AMZNx",
+          "mint": "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg",
+          "decimals": 8,
+          "program": "2022"
+        },
+        {
+          "symbol": "GOOGLx",
+          "mint": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
+          "decimals": 8,
+          "program": "2022"
+        },
+        {
+          "symbol": "MSFTx",
+          "mint": "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX",
+          "decimals": 8,
+          "program": "2022"
+        },
+        {
+          "symbol": "NVDAx",
+          "mint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+          "decimals": 8,
+          "program": "2022"
+        },
+        {
+          "symbol": "TSLAx",
+          "mint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+          "decimals": 8,
+          "program": "2022"
+        }
+      ]
+    },
+    "devnet": {
+      "markets": "GGmA2j8rAYoVaM3tFJogGF2cxWjHDBa6rn4MBrAeQk8H",
+      "usdMint": "7TvKhApMfxQXK22rjk9B3iDV2QryfQXLyEMJQnSU1MsD",
+      "mints": [
+        {
+          "symbol": "AAPLx",
+          "mint": "FnGSXzQtvX9h83ncarQqXsKXn2Me7QFF72qXm5JWBMTE",
+          "decimals": 8,
+          "program": "2022"
+        },
+        {
+          "symbol": "AMZNx",
+          "mint": "3XuxAX5EpKnZDesETk5aCdWtxN3CqNeHozRSKaDwRxT7",
+          "decimals": 8,
+          "program": "2022"
+        },
+        {
+          "symbol": "GOOGLx",
+          "mint": "F1aPDcHuXPgZepLh3Qy6xWimF6bykbtYJbHQsQJQKVg7",
+          "decimals": 8,
+          "program": "2022"
+        },
+        {
+          "symbol": "MSFTx",
+          "mint": "8gnwf9prTVZEkPvgHNrsBWiZP9Lm9jVastZaJMAUZxvk",
+          "decimals": 8,
+          "program": "2022"
+        },
+        {
+          "symbol": "NVDAx",
+          "mint": "CJWCxq7so1RsXgGpTDvdRmcVkWdY5DKfNejbdE7SZnq9",
+          "decimals": 8,
+          "program": "2022"
+        },
+        {
+          "symbol": "TSLAx",
+          "mint": "4baEwJaGMw65j8aKF2okc9SVad3xKFZNwtUKDgqLCkBR",
+          "decimals": 8,
+          "program": "2022"
+        }
+      ]
+    }
+  }
+}

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "./Icon";
 import { CLUSTER_NAME, shortAddress } from "@/lib/protocol";
 
-/** The Solana wallet button, drawn in the dashboard's own style (ink pill, Outfit, 16px radius). */
+/** The Solana wallet button, drawn in the dashboard's own style (ink pill, as on the landing page). */
 export function WalletButton() {
   const { publicKey, wallet, disconnect, connecting } = useWallet();
   const { setVisible } = useWalletModal();
@@ -26,7 +26,7 @@ export function WalletButton() {
   const addr = publicKey.toBase58();
   return (
     <span className="cx-wallet-group">
-      <span className="cx-wallet is-ghost" title="Finity runs on Solana devnet. Set your wallet to devnet too.">
+      <span className="cx-wallet is-ghost" title="Your wallet signs; Finity sends each transaction to the right place.">
         {wallet?.adapter.icon ? <img src={wallet.adapter.icon} alt="" width={18} height={18} /> : <span className="cx-dot-net" />}
         <span className="cx-wallet-net">{CLUSTER_NAME}</span>
       </span>

@@ -71,10 +71,11 @@ behind Sign-In With Solana, and can also go out by browser push, email or Telegr
 
 ## Mainnet
 
-**Finity V2** puts the Asset Clock and the Bell Check on Solana mainnet as a 6.8 KB program
-([`solana/v2`](solana/v2/)): deploy and seed cost ~0.044 SOL (~$3). Its keeper mirrors the devnet protocol's clock, oracle price and
-calibrated safe LTV, and the web app's **Mainnet** page lets a wallet open, Bell-check and close positions. Costs and
-steps: [`docs/mainnet.md`](docs/mainnet.md).
+**Finity Lend** ([`solana/lend`](solana/lend/), a 9.4 KB Pinocchio program) puts borrowing on Solana mainnet: borrow
+USDC against xStocks (AAPLx, AMZNx, GOOGLx, MSFTx, NVDAx, TSLAx) up to 55% LTV, repay any time to get the collateral back.
+The pool is the lender's USDC. Its keeper posts the devnet protocol's prices while US markets are open. Deploy and setup
+cost ≈ 0.064 SOL. The **Markets**, **Borrow**, **Lend** and **Mainnet** pages use it; the other pages run the full
+protocol. Steps: [`docs/mainnet.md`](docs/mainnet.md).
 
 ## Repository layout
 
@@ -83,7 +84,7 @@ steps: [`docs/mainnet.md`](docs/mainnet.md).
 | [`solana/programs/finity`](solana/programs/finity/) | Anchor program and its LiteSVM integration tests |
 | [`solana/reference/risk-core`](solana/reference/risk-core/) | Reference fixed-point risk math for the differential tests |
 | [`solana/data/calibration`](solana/data/calibration/) | Calendars, scenario sets, joint stress columns and σ tables loaded on-chain |
-| [`solana/v2`](solana/v2/) | Finity V2: the mainnet program (Pinocchio, no Anchor), its LiteSVM tests and `deploy.sh` |
+| [`solana/lend`](solana/lend/) | Finity Lend: the mainnet program (Pinocchio, no Anchor), its LiteSVM tests and `deploy.sh` |
 | [`solana/client`](solana/client/) | TypeScript client (`@finity/solana`): IDL, PDAs, markets, math ports, address book |
 | [`solana/scripts`](solana/scripts/) | Seed and loaders, keeper, relayer, indexer, API, notifier, smoke and e2e checks, devnet upgrade, multisig handover |
 | [`solana/notify`](solana/notify/) | Alert inbox (SQLite) and delivery by push, email and Telegram |

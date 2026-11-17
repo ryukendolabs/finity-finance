@@ -1,26 +1,44 @@
 /*
- * The Finity app. Every value here is taken from the dashboard mockup in the landing hero
- * (public/landing/dashboard.png): its colours, radii, type and card gradient, scaled to the
- * screen. Classes are prefixed `cx-` so nothing collides with the marketing site's Webflow CSS.
+ * The Finity app, in the landing page's theme (public/site, the Catalis template): its sky, near-black ink,
+ * whitesmoke surfaces, blue accent, pill buttons, Roboto body and Libre Caslon Condensed headings.
+ * Classes are prefixed `cx-` so nothing collides with the marketing site's Webflow CSS.
  */
 
+@font-face {
+  font-family: "Libre Caslon Condensed";
+  src: url("/fonts/LibreCaslonCondensed-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Libre Caslon Condensed";
+  src: url("/fonts/LibreCaslonCondensed-Italic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
-  --cx-ink: #2e335b;
-  --cx-grey: #9597aa;
-  --cx-grey-2: #878daa;
-  --cx-faint: #bbbcc6;
-  --cx-panel: #fcfbf9;
-  --cx-aside: #f6f6f3;
-  --cx-tile: #e0e7f9;
-  --cx-tile-hover: #d6dff7;
-  --cx-line: #e2e2e8;
+  --cx-ink: #1d1d1d;
+  --cx-grey: #6b6b6b;
+  --cx-grey-2: #7a7a7a;
+  --cx-faint: #b5b5b5;
+  --cx-panel: #ffffff;
+  --cx-aside: #f5f5f5;
+  --cx-tile: #f2f2f2;
+  --cx-tile-hover: #e9e9e9;
+  --cx-line: #efeff2;
+  --cx-accent: #0054f9;
   --cx-good: #2f8a5b;
   --cx-warn: #b7791f;
   --cx-bad: #c0392b;
   --cx-dot: #e84a5f;
-  --cx-card: radial-gradient(120% 95% at 0% 100%, #b4befb 0%, #b4befb00 58%),
-    radial-gradient(85% 100% at 100% 0%, #c3cbfa 0%, #c3cbfa00 62%), #e4e9fb;
-  --cx-font: var(--font-outfit), "Outfit", system-ui, sans-serif;
+  /* The landing's sky, as a card */
+  --cx-card: radial-gradient(120% 95% at 0% 100%, #8db4ee 0%, #8db4ee00 58%),
+    radial-gradient(85% 100% at 100% 0%, #d4e4fb 0%, #d4e4fb00 62%), #e8f0fc;
+  --cx-font: var(--font-roboto), Roboto, system-ui, sans-serif;
+  --cx-serif: "Libre Caslon Condensed", Georgia, serif;
 }
 
 * {
@@ -37,7 +55,7 @@ body {
   overflow-x: hidden;
   font-family: var(--cx-font);
   color: var(--cx-ink);
-  background: #6f8cc4 url("/landing/hero-video-poster.jpg") center / cover fixed;
+  background: #5b8fc8 url("/site/assets/39391212_690a61bdca64dff5bf95363b_hero-bg.avif") center / cover fixed;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -62,7 +80,7 @@ body {
   border-radius: 40px;
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
-  box-shadow: 0 30px 80px #2e335b26;
+  box-shadow: 0 30px 80px #13131326;
 }
 
 /* Brand, top-left */
@@ -71,9 +89,10 @@ body {
   align-items: center;
   gap: 10px;
   padding: 30px 0 0 36px;
-  font-size: 24px;
-  font-weight: 500;
-  letter-spacing: -0.2px;
+  font-family: var(--cx-serif);
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: -0.3px;
 }
 .cx-brand img {
   width: 28px;
@@ -118,7 +137,7 @@ body {
   font-weight: 500;
   padding: 6px 12px;
   border-radius: 20px;
-  border: 1px solid #2e335b40;
+  border: 1px solid #13131340;
   white-space: nowrap;
 }
 .cx-topbar-right {
@@ -216,9 +235,11 @@ body {
 }
 .cx-page-title {
   margin: 0;
-  font-size: 30px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
+  font-family: var(--cx-serif);
+  font-size: 44px;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.8px;
 }
 .cx-page-sub {
   margin: 6px 0 0;
@@ -250,14 +271,17 @@ body {
 
 .cx-h {
   margin: 0 0 18px;
-  font-size: 21px;
-  font-weight: 600;
+  font-family: var(--cx-serif);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -0.3px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 .cx-h small {
+  font-family: var(--cx-font);
   font-size: 14px;
   font-weight: 400;
   color: var(--cx-grey);
@@ -396,7 +420,7 @@ body {
   width: 46px;
   height: 46px;
   border-radius: 13px;
-  background: var(--cx-ink);
+  background: var(--cx-accent);
   color: #fff;
   display: grid;
   place-items: center;
@@ -452,20 +476,22 @@ body {
 
 /* Stat readout in the aside */
 .cx-stat-label {
-  color: #7e8198;
+  color: #6b6b6b;
   font-size: 15px;
 }
 .cx-stat-value {
   margin-top: 6px;
-  font-size: 38px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  font-family: var(--cx-serif);
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.8px;
 }
 .cx-chip {
   font-size: 13px;
   padding: 7px 12px;
   border-radius: 10px;
-  border: 1px solid #c9cad3;
+  border: 1px solid #d6d6d6;
   background: #fff;
   white-space: nowrap;
 }
@@ -489,7 +515,7 @@ body {
   font-weight: 600;
 }
 .cx-stat-row .cx-unit {
-  color: #abb1ca;
+  color: #b5b5b5;
   font-size: 15px;
 }
 .cx-stat-row .cx-sub {
@@ -527,7 +553,7 @@ body {
 .cx-bar {
   height: 8px;
   border-radius: 8px;
-  background: #e4e5ec;
+  background: #ececec;
   overflow: hidden;
 }
 .cx-bar span {
@@ -601,7 +627,20 @@ body {
   margin-top: 2px;
 }
 
+/* Controls inside a serif heading keep the body face and size. */
+.cx-h .cx-chip,
+.cx-h .cx-link-btn,
+.cx-h button,
+.cx-h a {
+  font-family: var(--cx-font);
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
 /* Callout */
+.cx-aside .cx-note {
+  background: var(--cx-panel);
+}
 .cx-note {
   display: flex;
   gap: 14px;
@@ -641,7 +680,7 @@ body {
 }
 .cx-alert p {
   margin: 0;
-  color: #585c77;
+  color: #4c4c4c;
   font-size: 14.5px;
   line-height: 1.5;
 }
@@ -672,7 +711,7 @@ body {
   width: 44px;
   height: 26px;
   border-radius: 20px;
-  background: #d5d7e2;
+  background: #e2e2e2;
   position: relative;
   cursor: pointer;
   transition: background-color 0.25s;
@@ -708,7 +747,7 @@ body {
   gap: 8px;
   height: 48px;
   padding: 0 22px;
-  border-radius: 16px;
+  border-radius: 999px;
   border: 0;
   background: var(--cx-ink);
   color: #fff !important;
@@ -738,10 +777,10 @@ body {
   background: var(--cx-panel);
   color: var(--cx-ink);
   font-family: var(--cx-font);
-  box-shadow: 0 40px 100px #2e335b4d;
+  box-shadow: 0 40px 100px #1313134d;
 }
 .cx-dialog::backdrop {
-  background: #2e335b59;
+  background: #13131359;
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
@@ -759,8 +798,9 @@ body {
 }
 .cx-dialog-head h2 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
+  font-family: var(--cx-serif);
+  font-size: 30px;
+  font-weight: 400;
 }
 .cx-dialog-head p {
   margin: 6px 0 0;
@@ -809,7 +849,7 @@ body {
   flex-wrap: wrap;
 }
 .cx-quick button {
-  border: 1px solid #c9cad3;
+  border: 1px solid #d6d6d6;
   background: #fff;
   border-radius: 10px;
   padding: 6px 12px;
@@ -926,7 +966,7 @@ body {
     align-items: flex-start;
   }
   .cx-page-title {
-    font-size: 26px;
+    font-size: 36px;
   }
   .cx-tile {
     flex: 1 1 140px;
@@ -1027,7 +1067,7 @@ body {
   gap: 8px;
   height: 46px;
   padding: 0 18px;
-  border-radius: 16px;
+  border-radius: 999px;
   border: 0;
   background: var(--cx-ink);
   color: #fff;
@@ -1089,7 +1129,7 @@ body {
   gap: 8px;
 }
 .cx-seg button {
-  border: 1px solid #c9cad3;
+  border: 1px solid #d6d6d6;
   background: #fff;
   border-radius: 10px;
   padding: 7px 12px;
@@ -1156,6 +1196,16 @@ body {
 .cx-note,
 .cx-alert p {
   overflow-wrap: anywhere;
+}
+/* Serif figures break only between words ("700,000.00 / USDC"), never inside a number; row amounts stay whole. */
+.cx-stat-value {
+  overflow-wrap: normal;
+}
+.cx-layer b {
+  flex: none;
+  margin-left: 12px;
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 .cx-card-foot,
 .cx-page-head,
@@ -1417,7 +1467,7 @@ body {
 }
 .cx-card-btn:hover {
   transform: translateY(-4px);
-  box-shadow: 0 22px 44px #2e335b26;
+  box-shadow: 0 22px 44px #13131326;
 }
 .cx-card-btn:focus-visible {
   outline: 2px solid var(--cx-ink);
@@ -1438,7 +1488,7 @@ body {
   animation: cx-spot-in 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .cx-spotlight[open]::backdrop {
-  background: #2e335b73;
+  background: #13131373;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   animation: cx-fade-in 0.3s ease;
@@ -1492,9 +1542,10 @@ body {
   margin-top: auto;
 }
 .cx-spot-ticker {
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: -0.4px;
+  font-family: var(--cx-serif);
+  font-size: 38px;
+  font-weight: 400;
+  letter-spacing: -0.5px;
 }
 .cx-spot-name {
   font-size: 15px;
@@ -1504,7 +1555,7 @@ body {
   font-size: clamp(34px, 7vw, 48px);
   font-weight: 600;
   letter-spacing: -1px;
-  color: #3f4152;
+  color: #2b2b2b;
   font-variant-numeric: tabular-nums;
 }
 .cx-spot-pause {
@@ -1604,7 +1655,7 @@ body {
   margin-top: 4px;
 }
 .cx-spot-ticker {
-  font-size: 26px;
+  font-size: 32px;
 }
 .cx-spot-price {
   font-size: clamp(30px, 5.2vh, 44px);

@@ -1,0 +1,154 @@
+/* Finity overrides on top of the licensed Catalis (Temlis) Webflow template. */
+
+/* Webflow injects a "Made in Webflow" badge on webflow-hosted exports. */
+.w-webflow-badge {
+  display: none !important;
+}
+
+/* Nav logo: the Finity mark on its own, clear of the bar's rounded corner and centred on the button's height */
+.finity-navlogo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.95rem;
+  height: 2.95rem;
+  margin-left: 0.75rem;
+}
+.finity-navlogo .finity-mark {
+  display: block;
+  width: 2.1rem;
+  height: 2.1rem;
+  object-fit: contain;
+}
+
+/* The menu's Launch App link is for phones, where the bar's button is hidden. */
+.finity-nav-cta {
+  display: none;
+}
+
+/* Phones: a slimmer bar, full width so it lines up with the menu panel that opens under it. */
+@media screen and (max-width: 767px) {
+  .navbar .nav_space {
+    height: 0.5rem;
+  }
+  .navbar .padding-global.is-navbar {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .navbar .container-large.is-navbar {
+    width: 100%;
+    max-width: none;
+  }
+  .navbar_content {
+    padding: 0.3rem 0.4rem 0.3rem 0.6rem;
+    border-bottom-left-radius: 1rem;
+    border-bottom-right-radius: 1rem;
+  }
+  .finity-navlogo {
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-left: 0;
+  }
+  .finity-navlogo .finity-mark {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+  .menu-button {
+    padding-left: 0;
+  }
+  .nav-button_component {
+    scale: 0.75;
+  }
+  .navbar_list .nav_links {
+    font-size: 1rem;
+    padding: 0.55rem 0.75rem;
+  }
+  .navbar_list .finity-nav-cta {
+    display: block;
+    align-self: stretch;
+    opacity: 1;
+    margin-top: 0.35rem;
+    border-radius: 999px;
+    background: #1d1d1d;
+    color: #fff !important;
+    text-align: center;
+  }
+}
+
+/* Floating navbar: once you scroll, it tucks up and leaves its bottom edge showing; hover or keyboard focus brings
+   it back. `translate` (not `transform`) so it never fights Webflow's own animations. */
+.navbar {
+  transition: translate 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.navbar_content {
+  transition: box-shadow 0.35s ease;
+}
+.navbar.is-tucked {
+  translate: 0 calc(-100% + 0.9rem);
+}
+/* A soft edge so the tucked strip stays visible over white sections. */
+.navbar.is-tucked .navbar_content {
+  box-shadow: 0 0.35rem 1.25rem rgb(0 0 0 / 0.12);
+}
+.navbar.is-tucked:hover,
+.navbar.is-tucked:focus-within,
+.navbar.is-tucked:has(.w--open) {
+  translate: 0 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar {
+    transition: none;
+  }
+}
+
+/* Footer logo: mark + wordmark in the template's heading face */
+.finity-footlogo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: auto;
+  height: 2rem;
+  font-family: Librecasloncondensed, Georgia, serif;
+  font-size: 1.85rem;
+  line-height: 1;
+  color: #1d1d1d;
+}
+.finity-footlogo .finity-mark {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
+/* Footer display wordmark (replaces the template's italic brand SVG) */
+.finity-visual {
+  container-type: inline-size;
+  width: 100%;
+}
+.finity-visual span {
+  display: block;
+  font-family: Librecasloncondensed, Georgia, serif;
+  font-style: italic;
+  font-size: 40cqw;
+  /* Room for the y's descender above the legal line. */
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #1d1d1d;
+}
+
+/* Footer CTA in place of the Webflow-hosted email form */
+.finity-form__text {
+  display: flex;
+  align-items: center;
+  color: #6b6b6b;
+}
+
+.finity-legal {
+  margin: 4rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #6b6b6b;
+}
+.finity-legal a {
+  color: inherit;
+  text-decoration: underline;
+}

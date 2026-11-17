@@ -4,53 +4,56 @@ import Link from "next/link";
 import { GradientCard, H, KV, Note, PageHead, Pill, StatBlock, pct, usd } from "../ui";
 import { ErrorNote, Loading, STATE_TONE } from "./shared";
 import { useApp } from "@/lib/app";
-import { explorerAddress, ticker, tokenLogo } from "@/lib/protocol";
+import { LEND_ADDR, lendExplorer, useLendMarkets } from "@/lib/lend";
+import { ticker, tokenLogo } from "@/lib/protocol";
 import { et, until } from "@/lib/time";
 
 const age = (s: number) => (s < 90 ? `${Math.round(s)} s ago` : s < 5400 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`);
+const money = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : usd(n, 0));
 
 export function MarketsView({ q }: { q: string }) {
-  const { markets, liquidity, isLoading, error } = useApp();
+  const lend = useLendMarkets();
+  const clock = useApp();
+  const markets = lend.data?.markets ?? [];
+  const pool = lend.data?.pool;
   const query = q.trim().toLowerCase();
   const shown = query
     ? markets.filter((m) => m.symbol.toLowerCase().includes(query) || m.name.toLowerCase().includes(query))
     : markets;
-  const collateral = markets.reduce((a, m) => a + m.collateralValue, 0);
-  const supplied = markets.reduce((a, m) => a + m.supplied, 0);
-  const borrowed = markets.reduce((a, m) => a + m.borrowed, 0);
-  const equity = markets.find((m) => m.marketHours);
-  const fund = markets.find((m) => !m.marketHours);
+  const equity = clock.markets.find((m) => m.marketHours);
   const c = equity?.clock;
-  const freshest = markets.length ? Math.min(...markets.map((m) => m.priceAge)) : null;
+  const now = Date.now() / 1000;
 
   return (
     <>
       <PageHead
         title="Markets"
-        sub="Isolated markets for tokenized stocks and a Treasury money fund on Solana devnet. Borrow limits follow each asset's market clock."
+        sub="Borrow USDC against tokenized stocks (xStocks), live on Solana mainnet. Each market lends up to its max LTV while US markets are open."
         right={query ? <Link className="cx-chip" href="/app/markets">Clear “{q}” ×</Link> : undefined}
       />
       <div className="cx-grid">
         <div className="cx-col">
           <section>
             <H right={<small>{shown.length} of {markets.length}</small>}>All markets</H>
-            {error && !markets.length ? (
-              <ErrorNote error={error} />
-            ) : isLoading && !markets.length ? (
+            {lend.error && !markets.length ? (
+              <ErrorNote error={lend.error} />
+            ) : lend.isLoading ? (
               <Loading what="Loading markets" />
+            ) : !LEND_ADDR || !lend.data ? (
+              <Note icon="clock">The markets open soon.</Note>
             ) : shown.length === 0 ? (
-              <Note icon="search">No market matches “{q}”. Try a ticker like NVDA or TBILL.</Note>
+              <Note icon="search">No market matches “{q}”. Try a ticker like NVDA or TSLA.</Note>
             ) : (
               <div className="cx-cards">
                 {shown.map((m) => (
                   <Link key={m.symbol} href={`/app/borrow?m=${m.symbol}`} className="cx-card-btn" aria-label={`Borrow against ${ticker(m.symbol)}`}>
                     <GradientCard
-                      logo={tokenLogo(m.symbol)}
+                      logo={tokenLogo(m.base)}
                       tag={ticker(m.symbol)}
-                      big={m.kind === "Treasury fund" ? `NAV ${usd(m.price, 2)}` : usd(m.price)}
-                      label={`Max LTV ${pct(m.maxLtv, 0)} · Limit now ${m.rule === "paused" ? "paused" : pct(m.borrowLtv, 1)}`}
-                      value={`Borrow ${pct(m.borrowApr, 2)} APR · Supply ${pct(m.supplyApr, 2)}`}
-                      pill={<Pill tone={STATE_TONE[m.state]}>{m.state}</Pill>}
+                      big={m.paused ? "Price paused" : m.kind === "Treasury fund" ? `NAV ${usd(m.price, 2)}` : usd(m.price)}
+                      label={`Max LTV ${pct(m.maxLtv, 0)}`}
+                      value={`${usd(m.collateralValue, 0)} collateral posted`}
+                      pill={<Pill tone={m.paused ? "soft" : "good"}>{m.paused ? "Paused" : "Borrowing"}</Pill>}
                     />
                   </Link>
                 ))}
@@ -58,19 +61,18 @@ export function MarketsView({ q }: { q: string }) {
             )}
           </section>
           <Note icon="lock">
-            From the Bell window (2 h before each close) until the reopen, new borrowing is capped at the closure&apos;s safe LTV on
-            debt projected to the reopen, and collateral is valued at the lower of the live price and the close. Nobody is
-            liquidated while a market is closed; repaying and adding collateral always work.
+            Prices are posted to the contract every 15 minutes while US markets are open. Outside those hours, and whenever a price is
+            more than 20 minutes old, new borrowing waits; repaying always works, and paying a loan off returns all its collateral.
           </Note>
         </div>
         <aside className="cx-aside">
-          <StatBlock label="Total supplied" value={supplied >= 1e6 ? `$${(supplied / 1e6).toFixed(2)}M` : usd(supplied, 0)} chip="All markets" />
+          <StatBlock label="Pool size" value={pool ? money(pool.supplied) : "—"} chip="All markets" />
           <KV
             rows={[
-              ["Borrowed", usd(borrowed, 0)],
-              ["Left to lend", usd(liquidity, 0)],
-              ["Utilisation", supplied > 0 ? pct(borrowed / supplied, 1) : "—"],
-              ["Collateral posted", usd(collateral, 0)],
+              ["Borrowed", pool ? usd(pool.lent, 0) : "—"],
+              ["Left to lend", pool ? usd(pool.cash, 0) : "—"],
+              ["Utilisation", pool && pool.supplied > 0 ? pct(pool.utilisation, 1) : "—"],
+              ["Collateral posted", pool ? usd(pool.collateralValue, 0) : "—"],
             ]}
           />
           <div>
@@ -82,26 +84,20 @@ export function MarketsView({ q }: { q: string }) {
                   ? [
                       ["Closure", `${c.current.type}, since ${et(c.current.closeAt)}`],
                       ["Reopens", c.current.reopenAt ? `${et(c.current.reopenAt)} (${until(c.current.reopenAt) ?? "now"})` : "Unknown"],
-                      ["Close price", usd(equity?.clock?.refPrice ?? 0)],
                     ]
-                  : [
-                      ["Bell window", `${et(c?.bellWindowAt)}${until(c?.bellWindowAt) ? ` (in ${until(c?.bellWindowAt)})` : ""}`],
-                      ["Bell deadline", et(c?.bellAt)],
-                      ["Close", `${et(c?.nextCloseAt)}, ${c?.nextClosureType.toLowerCase() ?? ""}`],
-                    ]) as [string, string][]),
-                ["T-Bill fund", fund ? <Pill key="f" tone={STATE_TONE[fund.state]}>{fund.state}</Pill> : "—"],
-                ["Prices updated", freshest === null ? "—" : age(freshest)],
+                  : [["Close", c ? `${et(c.nextCloseAt)}, ${c.nextClosureType.toLowerCase()}` : "—"]]) as [string, string][]),
+                ["Prices updated", pool?.priceAt ? age(now - pool.priceAt) : "Not yet"],
               ]}
             />
           </div>
-          <Note icon="external">
-            Every market is a Solana account.{" "}
-            {equity && (
-              <a href={explorerAddress(equity.key.toBase58())} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>
-                See {equity.symbol} on the explorer
+          {LEND_ADDR && (
+            <Note icon="external">
+              Every market lives in one Solana account.{" "}
+              <a href={lendExplorer(LEND_ADDR.markets.toBase58())} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>
+                See it on the explorer
               </a>
-            )}
-          </Note>
+            </Note>
+          )}
         </aside>
       </div>
     </>

@@ -1,6 +1,6 @@
 "use client";
 /**
- * Finity's Solana data layer: markets, positions, the senior vault and balances read straight from devnet
+ * Finity's Solana data layer: markets, positions, the senior vault and balances read straight from the program's
  * accounts (accrued client-side with the program's exact math), instruction builders for every user action,
  * and one transaction sender.
  */
@@ -26,7 +26,6 @@ import {
   accrued,
   configPda,
   finityProgram,
-  deadSharesPda,
   debtOf,
   fetchMarkets,
   fetchPositions,
@@ -35,10 +34,8 @@ import {
   liquidityOf,
   positionPda,
   rates,
-  redeemPda,
   seniorPda,
   sessionName,
-  shareEscrowPda,
   shareMintPda,
   sharesToAssets,
   toUnits,
@@ -55,7 +52,7 @@ import {
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey, SystemProgram, Transaction, type AccountMeta, type TransactionInstruction } from "@solana/web3.js";
+import { PublicKey, SystemProgram, Transaction, type TransactionInstruction } from "@solana/web3.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { logActivity } from "./activity";
@@ -339,8 +336,6 @@ export function useBalances() {
 
 // ── Senior vault ─────────────────────────────────────────────────────────────────────────────────
 
-export type RedeemTicket = { id: number; key: PublicKey; shares: bigint; assets: number; processed: boolean; createdAt: number };
-
 export type VaultView = {
   marketKeys: PublicKey[];
   /** idle + Σ accrued market supply, in USDC. */
@@ -403,30 +398,6 @@ export function useSeniorVault(markets: Market[]) {
   return { vault: q.data, error: q.error, isLoading: q.isLoading };
 }
 
-/** This wallet's open redeem requests (claimed ones are closed on-chain). */
-export function useRedeemTickets() {
-  const program = useProgram();
-  const { publicKey } = useWallet();
-  return useQuery({
-    queryKey: ["tickets", publicKey?.toBase58()],
-    enabled: !!publicKey,
-    refetchInterval: 15_000,
-    queryFn: async (): Promise<RedeemTicket[]> => {
-      // RedeemRequest layout: discriminator (8), id (8), then the owner.
-      const rows = await program.account.redeemRequest.all([{ memcmp: { offset: 16, bytes: publicKey!.toBase58() } }]);
-      return rows
-        .map(({ publicKey: key, account: r }) => ({
-          id: Number(r.id.toString()),
-          key,
-          shares: BigInt(r.shares.toString()),
-          assets: fromUnits(r.assets),
-          processed: r.processed,
-          createdAt: Number(r.createdAt.toString()),
-        }))
-        .sort((a, b) => a.id - b.id);
-    },
-  });
-}
 
 // ── Instructions ─────────────────────────────────────────────────────────────────────────────────
 
@@ -436,7 +407,6 @@ const ensureAta = (payer: PublicKey, mint: PublicKey) =>
   createAssociatedTokenAccountIdempotentInstruction(payer, ata(mint, payer), payer, mint);
 const tokenAccounts = { tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId };
 const ataAccounts = { associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID };
-const writable = (keys: PublicKey[]): AccountMeta[] => keys.map((pubkey) => ({ pubkey, isSigner: false, isWritable: true }));
 
 export const ix = {
   faucet: async (program: Program, owner: PublicKey, mint: PublicKey, amount: number, decimals: number) => [
@@ -484,50 +454,6 @@ export const ix = {
       })
       .instruction(),
   ],
-  lendDeposit: async (program: Program, owner: PublicKey, marketKeys: PublicKey[], assets: BN) => [
-    ensureAta(owner, USDC_MINT),
-    await program.methods
-      .lendDeposit(assets)
-      .accountsPartial({
-        owner, config: configPda(), senior: seniorPda(), usdcMint: USDC_MINT, shareMint: SHARE_MINT,
-        ownerUsdc: ata(USDC_MINT, owner), ownerShares: ata(SHARE_MINT, owner), deadShares: deadSharesPda(),
-        usdcVault: usdcVaultPda(), ...tokenAccounts, ...ataAccounts,
-      })
-      .remainingAccounts(writable(marketKeys))
-      .instruction(),
-  ],
-  lendRedeem: async (program: Program, owner: PublicKey, marketKeys: PublicKey[], shares: BN) => [
-    await program.methods
-      .lendRedeem(shares)
-      .accountsPartial({
-        owner, config: configPda(), senior: seniorPda(), usdcMint: USDC_MINT, shareMint: SHARE_MINT,
-        ownerShares: ata(SHARE_MINT, owner), ownerUsdc: ata(USDC_MINT, owner), usdcVault: usdcVaultPda(),
-        ...tokenAccounts, ...ataAccounts,
-      })
-      .remainingAccounts(writable(marketKeys))
-      .instruction(),
-  ],
-  requestRedeem: async (program: Program, owner: PublicKey, shares: BN) => {
-    const v = await program.account.seniorVault.fetch(seniorPda());
-    return [
-      await program.methods
-        .requestRedeem(shares)
-        .accountsPartial({
-          owner, senior: seniorPda(), shareMint: SHARE_MINT, ownerShares: ata(SHARE_MINT, owner),
-          shareEscrow: shareEscrowPda(), request: redeemPda(BigInt(v.nextRequestId.toString())), ...tokenAccounts,
-        })
-        .instruction(),
-    ];
-  },
-  claimRedeem: async (program: Program, owner: PublicKey, id: number) => [
-    await program.methods
-      .claimRedeem()
-      .accountsPartial({
-        owner, config: configPda(), senior: seniorPda(), usdcMint: USDC_MINT, request: redeemPda(id),
-        ownerUsdc: ata(USDC_MINT, owner), usdcVault: usdcVaultPda(), ...tokenAccounts, ...ataAccounts,
-      })
-      .instruction(),
-  ],
 };
 
 // ── Sending ──────────────────────────────────────────────────────────────────────────────────────
@@ -542,24 +468,35 @@ export function humanError(e: unknown): string {
   if (PROGRAM_ERRORS.has(code)) return `${PROGRAM_ERRORS.get(code)}.`;
   if (/User rejected|rejected the request/i.test(text)) return "You rejected the request in your wallet.";
   if (/insufficient lamports|insufficient funds for (rent|fee)|Attempt to debit an account but found no record/i.test(text))
-    return "Not enough devnet SOL for the fee. Get some from faucet.solana.com.";
+    return "The network fee couldn't be covered just now. Try again in a minute.";
   if (/insufficient funds/i.test(text)) return "Not enough tokens in your wallet for this.";
-  if (/429|Too many requests/i.test(text)) return "The devnet RPC is rate-limiting requests. Try again in a few seconds.";
+  if (/429|Too many requests/i.test(text)) return "The network is busy. Try again in a few seconds.";
   return e instanceof Error ? e.message : String(e);
 }
 
 export type ActivityNote = { icon: string; title: string; amount: string; kind: string };
 
+/** Asks the server to cover this wallet's network fees when its balance is low (no-op otherwise). */
+async function ensureFees(wallet: PublicKey) {
+  await fetch("/api/gas", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ wallet: wallet.toBase58() }) }).catch(() => null);
+}
+
+/** The wallet only signs; the app sends through its own connection, so the wallet's network setting doesn't matter,
+ *  and the fees are covered by the server (ensureFees). */
 export function useSend() {
   const { connection } = useConnection();
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey, signTransaction } = useWallet();
   const qc = useQueryClient();
   return async (ixs: TransactionInstruction[], onStatus?: (s: string) => void, activity?: ActivityNote): Promise<string> => {
-    if (!publicKey) throw new Error("Connect a wallet first.");
+    if (!publicKey || !signTransaction) throw new Error("Connect a wallet first.");
+    onStatus?.("Preparing…");
+    await ensureFees(publicKey);
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
     const tx = new Transaction({ feePayer: publicKey, blockhash, lastValidBlockHeight }).add(...ixs);
     onStatus?.("Confirm in wallet…");
-    const sig = await sendTransaction(tx, connection);
+    const signed = await signTransaction(tx);
+    onStatus?.("Sending…");
+    const sig = await connection.sendRawTransaction(signed.serialize());
     onStatus?.("Confirming…");
     const res = await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
     if (res.value.err) {

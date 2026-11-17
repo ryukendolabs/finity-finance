@@ -15,6 +15,8 @@ export type Activity = {
   /** Transaction signature. */
   sig: string;
   when: number;
+  /** "lend": sent to Finity Lend (its explorer link); otherwise the full protocol (no link). */
+  net?: "lend";
 };
 
 const key = (address: string) => `cx-activity-${address}`;

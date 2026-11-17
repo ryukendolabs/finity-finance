@@ -1,1 +1,1 @@
-Finity Finance: borrow USDC against tokenized stocks and Treasury funds on Solana devnet
+Finity Finance: borrow against tokenized stocks and Treasury funds on Solana

@@ -3,9 +3,10 @@
 import { BN, STOCK_DECIMALS, USDC_DECIMALS } from "@finity/solana";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import type { TransactionInstruction } from "@solana/web3.js";
+import type { Keypair, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { useRef, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
+import { lendExplorer, lendHumanError, useLendSend } from "@/lib/lend";
 import { explorerTx, ticker } from "@/lib/protocol";
 import { et } from "@/lib/time";
 import { LOAN_SYMBOL, humanError, ix, poolIx, useProgram, useSend, type ActivityNote, type Market, type PoolView, type Position } from "@/lib/solana";
@@ -37,8 +38,11 @@ export type Spec = {
     /** Why this action can't run right now (shown instead of sending). */
     blocked?: string | null;
     hint?: ReactNode;
-    /** Build the instructions from the raw inputs; throw an Error to show a validation message. */
-    plan: (v: Record<string, string>) => Promise<TransactionInstruction[]>;
+    /** Build the instructions from the raw inputs (plus any new accounts that must sign, or a transaction the
+     *  server already built); throw an Error to show a validation message. */
+    plan: (v: Record<string, string>) => Promise<TransactionInstruction[] | { ixs: TransactionInstruction[] | Transaction; signers?: Keypair[] }>;
+    /** Send to Finity Lend on mainnet instead of the full protocol. */
+    lend?: boolean;
     /** Logged to this device's activity feed once the transaction lands. */
     activity?: (v: Record<string, string>) => ActivityNote;
   };
@@ -76,6 +80,7 @@ export function ActionTile({ spec }: { spec: Spec }) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const send = useSend();
+  const lendSend = useLendSend();
   const nums = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, Number(v) || 0]));
   const disabled = !!busy || !!d.blocked;
 
@@ -92,10 +97,13 @@ export function ActionTile({ spec }: { spec: Spec }) {
     setDone(null);
     try {
       setBusy("Preparing…");
-      const ixs = await d.plan(values);
-      setDone(await send(ixs, setBusy, d.activity?.(values)));
+      const planned = await d.plan(values);
+      const { ixs, signers = [] } = Array.isArray(planned) ? { ixs: planned } : planned;
+      if (d.lend) setDone(await lendSend(ixs, signers, setBusy, d.activity?.(values)));
+      else if (Array.isArray(ixs)) setDone(await send(ixs, setBusy, d.activity?.(values)));
+      else throw new Error("Unsupported transaction.");
     } catch (e) {
-      setError(humanError(e));
+      setError(d.lend ? lendHumanError(e) : humanError(e));
     } finally {
       setBusy(null);
     }
@@ -172,9 +180,11 @@ export function ActionTile({ spec }: { spec: Spec }) {
           ) : done ? (
             <p className="cx-hint is-good" role="status">
               Done.{" "}
-              <a href={explorerTx(done)} target="_blank" rel="noreferrer">
-                View transaction
-              </a>
+              {(d.lend ? lendExplorer(done, "tx") : explorerTx(done)) && (
+                <a href={(d.lend ? lendExplorer(done, "tx") : explorerTx(done))!} target="_blank" rel="noreferrer">
+                  View transaction
+                </a>
+              )}
             </p>
           ) : d.blocked ? (
             <p className="cx-hint">{d.blocked}</p>

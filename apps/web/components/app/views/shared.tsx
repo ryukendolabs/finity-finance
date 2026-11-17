@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { ConnectFirst } from "../actions";
 import { GradientCard, Note, Pill, num, pct } from "../ui";
 import { useActivity } from "@/lib/activity";
+import { lendExplorer } from "@/lib/lend";
 import { explorerTx, ticker, tokenLogo } from "@/lib/protocol";
 import { local } from "@/lib/time";
 import { LOAN_SYMBOL, type MarketState, type Position } from "@/lib/solana";
@@ -35,7 +36,7 @@ export function Loading({ what = "Loading" }: { what?: string }) {
 export function ErrorNote({ error }: { error: unknown }) {
   return (
     <Note icon="alert">
-      Couldn&apos;t read Solana devnet ({error instanceof Error ? error.message : String(error)}). The app retries on its own.
+      Couldn&apos;t reach Solana ({error instanceof Error ? error.message : String(error)}). The app retries on its own.
     </Note>
   );
 }
@@ -66,9 +67,9 @@ export function LoanCard({ p, bell }: { p: Position; bell?: "safe" | "due" | "co
 export function NoLoans() {
   return (
     <Note icon="card">
-      You have no loans yet. Open one below with test tokens from the{" "}
-      <Link href="/app/faucet" style={{ textDecoration: "underline" }}>
-        Faucet
+      You have no loans yet.{" "}
+      <Link href="/app/borrow" style={{ textDecoration: "underline" }}>
+        Borrow USDC against your xStocks
       </Link>
       .
     </Note>
@@ -82,7 +83,7 @@ export function useActivityRows(address: string | undefined, kind?: string) {
     title: a.title,
     when: local(a.when),
     amount: a.amount,
-    href: explorerTx(a.sig),
+    href: a.net === "lend" ? lendExplorer(a.sig, "tx") : (explorerTx(a.sig) ?? undefined),
   }));
 }
 

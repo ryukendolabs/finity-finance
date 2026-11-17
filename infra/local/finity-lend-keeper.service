@@ -1,0 +1,18 @@
+[Unit]
+Description=Finity Lend keeper (mainnet): posts the market prices from the devnet protocol while markets are open
+After=network-online.target finity-bot.service
+Wants=network-online.target
+
+[Service]
+# LEND_RPC_URL (a mainnet RPC), SOLANA_RPC_URL (the devnet one it reads) and the LEND_* knobs; never
+# committed.
+EnvironmentFile=-%h/.config/finity/env
+WorkingDirectory=@REPO@/solana
+Environment=PATH=@NODE_BIN@:/usr/local/bin:/usr/bin:/bin
+# Markets authority and fee payer: ~/.config/finity/mainnet-authority.json (or LEND_WALLET).
+ExecStart=@NODE_BIN@/pnpm -s lend keeper --cluster @LEND_CLUSTER@
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target

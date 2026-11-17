@@ -18,7 +18,6 @@ const NAV: NavItem[] = [
   { href: "/app/underwrite", label: "Underwrite", icon: "shield-plain" },
   { href: "/app/auctions", label: "Auctions", icon: "gavel" },
   { href: "/app/risk", label: "Risk", icon: "pie" },
-  { href: "/app/mainnet", label: "Mainnet", icon: "external" },
   { href: "/app/alerts", label: "Alerts", icon: "mail" },
 ];
 const NAV_BOTTOM: NavItem[] = [
@@ -77,8 +76,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Icon name="search" size={19} strokeWidth={2} />
             <input name="q" type="search" placeholder="Search markets" aria-label="Search markets" />
           </form>
-          <span className="cx-preview" title="Solana devnet: test tokens only">
-            Devnet
+          <span className="cx-preview" title="Early access">
+            Beta
           </span>
           <div className="cx-topbar-right">
             <WalletButton />

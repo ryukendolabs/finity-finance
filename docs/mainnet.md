@@ -1,46 +1,55 @@
-# Finity V2 on mainnet
+# Finity Lend on mainnet
 
-The full protocol keeps running on devnet. Finity V2 (`solana/v2`, a 6,760-byte Pinocchio program) puts its two
-distinctive rules on Solana mainnet: each market's clock (open, extended, closed, halted, reopen; next close and
-reopen) and the Bell Check (from two hours before the close, positions must be at the closure-safe LTV). Its keeper
-mirrors the devnet program: clock state, the oracle price (2-of-3 relayer-signed and verified on devnet) and the safe
-LTV computed from the calibrated risk sets. Users open positions from the web app's **Mainnet** page with their own
-wallet. Positions are records: no tokens move, so no funds are at risk.
+The full protocol keeps running on devnet. Finity Lend (`solana/lend`, a 9,384-byte Pinocchio program) puts borrowing on
+Solana mainnet with real tokens:
 
-## Cost
+- **Collateral:** the six xStocks: AAPLx, AMZNx, GOOGLx, MSFTx, NVDAx, TSLAx (Token-2022, 8 decimals).
+- **Loan:** USDC (SPL Token, 6 decimals), from one pool supplied by the lender's wallet.
+- **Limit:** 55% LTV (the full protocol's closure-safe level), checked when borrowing against a price at most 20 minutes old.
+- **Repaying** works at any time; paying a loan off returns all its collateral. No interest, no liquidation.
+- **Prices:** the keeper (`pnpm lend keeper`, service `finity-lend-keeper`) posts all six in one transaction every 15 minutes
+  while US markets are open (regular hours), from the devnet protocol's oracle. Outside those hours borrowing waits.
 
-Rent is a refundable deposit; fees are 0.000005 SOL per signature. SOL figures are exact (`solana rent` on mainnet,
-16 Nov 2026); dollar figures use $70.8/SOL.
+## Risks the lender takes
 
-| Item | SOL | USD |
-|---|---|---|
-| Program data (6,760 bytes) | 0.034991 | 2.48 |
-| Program account | 0.000833 | 0.06 |
-| Deploy fees | ~0.0003 | 0.02 |
-| 7 markets × 0.001097 | 0.007681 | 0.54 |
-| **Deploy + seed** | **~0.0438** | **~3.10** |
-| Keeper | ~0.0006 per trading day (writes only what changed: price every 4 min while open, hourly while closed) | ~0.04/day |
+- No liquidation: if a stock falls past its limit, a borrower can keep the USDC and the pool takes the loss.
+- The markets authority (the keeper's key) posts the prices; whoever holds it could post a wrong price.
+- The xStock issuer can move tokens out of any account (permanent delegate) and pause transfers.
 
-Fund **0.05 SOL (~$3.55)**: deploy, seed and about two weeks of keeper fees. Rehearsed end to end on devnet (same
-program address, `GvaQuq1tNpPHu3ZvKcxZ4dNSze59EMPBq7u3TMYyHAxx`).
+## Cost (mainnet rent, 5,080 lamports per byte)
+
+| Item | SOL |
+| --- | --- |
+| Program (9,384 bytes) + program account | 0.049383 |
+| Markets account (528 bytes) | 0.003332 |
+| 6 xStock vaults (179 bytes) + USDC vault (165 bytes) | 0.010846 |
+| Fees | ~0.000250 |
+| **Total** | **≈ 0.0638** |
+
+The fee payer also keeps its 0.00065 SOL minimum. A price update costs 0.000005 SOL (about 0.00014 SOL per trading day).
+Growing a deployed program needs at least 10,240 more bytes (≈ 0.053 SOL), so deploy the final build the first time.
 
 ## Steps
 
-1. **Fund the authority.** Send **0.05 SOL** to `2jUycByYFs2mBR6xsuHsKiCnVMec8uxJanmAwpNubto2`
-   (key: `~/.config/finity/mainnet-authority.json`, mode 600). It pays for everything and is the upgrade and
-   market authority.
-2. **Mainnet RPC (recommended).** Add `V2_RPC_URL=<mainnet endpoint>` to `~/.config/finity/env`. The public
-   endpoint works for a light load but rate-limits.
-3. **Deploy.** `solana/v2/deploy.sh mainnet`: builds, runs the tests, prints the exact cost and asks before
-   sending anything.
-4. **Seed markets.** `cd solana && pnpm v2 seed --cluster mainnet` (all 7 markets, or `--markets AAPL,NVDA,TSLA`
-   to save 0.0011 SOL each). Writes the addresses into `solana/client/v2.json`; commit that file so the web app
-   can find the markets.
-5. **Keeper.** `infra/local/up.sh` starts `finity-v2-keeper` once steps 1 and 4 are done. Check it with
-   `pnpm v2 status --cluster mainnet` and `journalctl --user -fu finity-v2-keeper`.
-6. **Web app.** Set `V2_RPC_URL` on the web host too (the `/api/rpc/mainnet` proxy uses it). The **Mainnet**
-   page reads the markets from `client/v2.json`.
+1. **Keys** (never in the repo, `~/.config/finity`, mode 600): `mainnet-authority.json` (payer, upgrade authority, markets
+   authority and keeper), `finity-lend-program.json` (program address `He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL`).
+   `env` holds `LEND_LENDER`, `GAS_SPONSOR_KEY` and optionally `LEND_RPC_URL` (a private mainnet RPC).
+2. **Fund** the authority with ≈ 0.0706 SOL.
+3. **Deploy:** `solana/lend/deploy.sh mainnet` builds the three variants, runs the tests, prints the exact cost and asks
+   before sending.
+4. **Set up:** `cd solana && pnpm lend seed --cluster mainnet` checks the real mints on-chain, creates the markets account
+   and vaults, lists the markets and verifies them. It writes `solana/client/lend.json`; commit it so the web app uses it.
+5. **Keeper:** `infra/local/up.sh` starts `finity-lend-keeper` once the cluster is seeded.
+   `pnpm lend status --cluster mainnet` and `journalctl --user -fu finity-lend-keeper` show it working.
+6. **Supply:** the lender's wallet opens the Lend page and supplies USDC.
 
-**Afterwards (optional):** `pnpm v2 close-all --cluster mainnet` returns the markets' rent, and
-`solana program close GvaQuq1tNpPHu3ZvKcxZ4dNSze59EMPBq7u3TMYyHAxx --bypass-warning -um --keypair ~/.config/finity/mainnet-authority.json`
-returns the program's. What's left as the real cost is fees: well under $1.
+## Shutting down
+
+`solana/lend/deploy.sh mainnet --teardown` replaces the program with the smaller teardown build (no extra rent), then
+`pnpm lend teardown --cluster mainnet` returns every position's collateral to its owner and the rest of the pool to the
+lender, closes the vaults and the markets account, and prints the command that closes the program and returns its rent.
+
+## Rehearsing on devnet
+
+`solana/lend/deploy.sh devnet`, then `pnpm lend seed|keeper --force|demo|status|teardown --cluster devnet`. Devnet uses
+Token-2022 test mints shaped like the xStocks and a test USD mint.
