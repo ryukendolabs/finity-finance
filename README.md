@@ -1,12 +1,18 @@
 # Finity Finance
-<img width="2846" height="1565" alt="Screenshot from 2026-11-17 17-06-01" src="https://github.com/user-attachments/assets/fa9975ea-3fbe-4815-a03d-6b98aa465394" />
 
 **Borrow on stocks, keep your weekend.** Finity is a lending protocol on Solana for tokenized stocks whose rules follow
 each stock's real market clock, so a loan is never liquidated on a price the exchange never printed.
 
+[![Solana mainnet](https://img.shields.io/badge/Solana-mainnet-14F195?logo=solana&logoColor=white)](https://explorer.solana.com/address/He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL)
+[![Program](https://img.shields.io/badge/program-Pinocchio%20%C2%B7%209.4%20KB-1d1d1d)](solana/lend/)
+[![Collateral](https://img.shields.io/badge/collateral-xStocks-0054f9)](#8-addresses--revenue)
+[![Litepaper](https://img.shields.io/badge/litepaper-PDF-8db4ee)](docs/litepaper/finity-litepaper.pdf)
+[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
+
+<img width="2846" height="1565" alt="The Finity Finance app" src="https://github.com/user-attachments/assets/fa9975ea-3fbe-4815-a03d-6b98aa465394" />
+
 > **Live on Solana mainnet:** borrow USDC against xStocks (AAPLx, AMZNx, GOOGLx, MSFTx, NVDAx, TSLAx).
-> Program [`He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL`](https://explorer.solana.com/address/He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL) ·
-> [Litepaper (PDF)](docs/litepaper/finity-litepaper.pdf)
+> Program [`He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL`](https://explorer.solana.com/address/He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL)
 
 ---
 
@@ -42,8 +48,12 @@ crypto assets face a choice with no good answer:
 | Ignore the weekend | Lenders silently carry the Friday-to-Monday gap; one earnings or fraud gap creates bad debt |
 | Use a very low LTV all the time | Capital-inefficient for the 19% of the week when a live price exists |
 
-The real risk is the **gap** at the reopen, $G = P_{open}/P_{close} - 1$, and its size depends on the stock and the
-length of the closure. Nobody prices it.
+The real risk is the **gap** at the reopen, and its size depends on the stock and the length of the closure.
+Nobody prices it.
+
+```math
+G = \frac{P_{\mathrm{open}}}{P_{\mathrm{close}}} - 1
+```
 
 ## 4. Solution
 
@@ -60,23 +70,71 @@ Finity makes the market clock a first-class part of every loan:
 
 ## 5. How it works
 
-```
- Market open ───────────────────────────► Bell window (close − 2 h) ──► Close ──────────────► Reopen
- limit = max LTV                           limit = closure-safe LTV       no liquidations      marked to the
- live price, liquidation if HF < 1         on debt projected to reopen    Gap Cover pays gap   first real price
+### The loan follows the market clock
+
+| Phase | When | Borrowing limit | Liquidation |
+|---|---|---|---|
+| **Open** | Regular session, until 2 h before the close | Max LTV | At a live price, when the health factor falls below 1 |
+| **Bell window** | The last 2 h before the close | Closure-safe LTV, on debt projected to the reopen | At a live price |
+| **Closed** | Overnight, weekend, holiday or halt | Closure-safe LTV | **Never** |
+| **Reopen** | The first prices after the reopen | New debt paused until prices settle | Sealed-bid batch auction |
+
+### Closure-safe LTV
+
+For each stock and closure type, Finity stores a calibrated set of historical gaps $z_i$, in units of the stock's
+volatility $\sigma$ and pooled across a peer group since 2016. Each gap maps to the share of collateral that survives
+the reopen, after a dividend drop $\delta$ and a 3% liquidation haircut $\kappa$:
+
+```math
+g(z) = \max\left(0,\; 1 + \sigma z - \delta\right)\left(1 - \kappa\right)
 ```
 
-- **Closure-safe LTV.** For each stock and closure type, Finity stores a calibrated set of historical gaps $z_i$ (in units
-  of the stock's volatility $\sigma$, pooled across a peer group since 2016). Each gap maps to the share of collateral that
-  survives, $g(z) = \max(0, 1 + \sigma z - \delta)(1 - \kappa)$. The limit is $\min(g(z_{(\lceil \alpha n \rceil)}), \text{LTV}_{max})$
-  with $\alpha = 0.1\%$: the 1-in-1,000 gap. For AAPL over a weekend this gives 89.5%, so the 75% cap binds.
-- **Projected debt.** Interest keeps accruing while the market is closed, so the limit is measured on
-  $D_{proj} = D(1 + r \cdot d/365)$ at the reopen.
-- **Gap Cover premium.** $\pi = \max(\pi_{min}, (1 + \eta u'^2)[(1+\theta)\,EL + c\,\tau\,ES_{97.5\%}])$: expected loss
-  with a loading, plus the cost of capital against the tail for the length of the closure, rising with the pool's
-  utilization. A 90%-LTV AAPL loan of \$9,000 costs about **\$0.55** to carry through a weekend.
-- **Loss waterfall.** A reopen shortfall is paid by the Underwriter Pool first, then the protocol reserve, and only then by
-  senior lenders.
+The limit is the gap factor at the 1-in-1,000 scenario, capped at the market's maximum:
+
+```math
+\mathrm{LTV}_{\mathrm{safe}} = \min\left( g\left(z_{(k)}\right),\; \mathrm{LTV}_{\max} \right), \qquad k = \lceil \alpha n \rceil, \quad \alpha = 0.001
+```
+
+For AAPL over a weekend the gap factor is 89.5%, so the 75% cap binds.
+
+### Projected debt
+
+Interest keeps accruing while the market is closed, so the limit is measured on the debt as it will stand at the
+reopen, after a closure of $d$ days:
+
+```math
+D_{\mathrm{proj}} = D \left( 1 + r \, \frac{d}{365} \right)
+```
+
+### Gap Cover premium
+
+Each scenario's loss to the lender is the part of the projected debt the surviving collateral does not cover. The
+premium charges the expected loss with a loading, plus the cost of capital held against the tail for the length of
+the closure, and rises with the pool's utilization $u'$ after the sale:
+
+```math
+L_i = \max\left(0,\; D_{\mathrm{proj}} - V \, g(z_i)\right)
+```
+
+```math
+\pi = \max\left( \pi_{\min},\; \left(1 + \eta \, u'^2\right) \left[ (1 + \theta) \, \mathrm{EL} + c \, \tau \, \mathrm{ES}_{\beta} \right] \right)
+```
+
+| Parameter | Meaning | Value |
+|---|---|---|
+| $\beta$ | Expected-shortfall level | 97.5% |
+| $\theta$ | Loading on expected loss | 100% |
+| $c$ | Annual cost of capital | 15% |
+| $\eta$ | Utilization surcharge | 4 |
+| $\pi_{\min}$ | Minimum premium | 0.50 USDC |
+
+**Example.** A \$9,000 AAPL loan at 90% LTV, far above the 75% limit, costs about **\$0.55** to carry through a
+weekend: only 3 of 3,000 historical scenarios lose money.
+
+### Loss waterfall
+
+A reopen shortfall is paid by the **Underwriter Pool** first, then the **protocol reserve**, and only then by
+**senior lenders**.
 
 All of the maths, with worked examples on real calibrated data, is in the
 [litepaper](docs/litepaper/finity-litepaper.pdf).
