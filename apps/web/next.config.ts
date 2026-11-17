@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
+import path from "node:path";
+
+/** Server deploys build a self-contained server (`NEXT_STANDALONE=1`, into `.next-deploy`): only the files it needs,
+ *  no full node_modules. Local builds are unchanged. */
+const standalone = process.env.NEXT_STANDALONE === "1";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  ...(standalone ? { output: "standalone" as const, distDir: ".next-deploy", outputFileTracingRoot: path.join(__dirname, "../..") } : {}),
   // The shared Solana client (IDL, PDAs, markets) is a workspace package shipped as TypeScript source.
   transpilePackages: ["@finity/solana"],
   // The alert inbox's native SQLite binding loads at runtime on the server.

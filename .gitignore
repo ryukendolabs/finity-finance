@@ -17,3 +17,4 @@ test-ledger/
 .DS_Store
 .idea/
 .vscode/
+infra/hostinger/.dist

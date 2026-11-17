@@ -11,6 +11,8 @@ each stock's real market clock, so a loan is never liquidated on a price the exc
 
 <img width="2846" height="1565" alt="The Finity Finance app" src="https://github.com/user-attachments/assets/fa9975ea-3fbe-4815-a03d-6b98aa465394" />
 
+> **Live app: [srv2163833.hstgr.cloud](https://srv2163833.hstgr.cloud)** · [Stake](https://srv2163833.hstgr.cloud/stake) · [Public API](https://srv2163833.hstgr.cloud/v1/health)
+>
 > **Live on Solana mainnet:** borrow USDC against xStocks (AAPLx, AMZNx, GOOGLx, MSFTx, NVDAx, TSLAx).
 > Program [`He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL`](https://explorer.solana.com/address/He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL)
 
@@ -323,6 +325,14 @@ infra/local/up.sh        # builds the web app and starts every service as system
 
 Web app only: `cd apps/web && cp .env.example .env.local && pnpm dev`.
 
+**Deploy to a server.** The live app runs on one Ubuntu VPS: a standalone Next.js server and one bundled file per
+backend service (~86 MB in all), behind nginx with HTTPS, as hardened systemd services.
+
+```sh
+infra/hostinger/deploy.sh --setup --keys   # first time: Node, nginx, HTTPS, firewall, keys, services
+infra/hostinger/deploy.sh                  # every update: build here, ship, restart (about a minute)
+```
+
 **Configuration.** Private settings live in `~/.config/finity/env` (mode 600), read by every service; keys sit next to
 it and never enter the repo.
 
@@ -381,6 +391,7 @@ cd solana && pnpm lend status --cluster mainnet  # the live markets, prices and 
 | [`apps/web`](apps/web/) | The web app, the stake page, the RPC relay, fee sponsor and Sign-In With Solana |
 | [`apps/web/public/site`](apps/web/public/site/) | The landing page |
 | [`infra/local`](infra/local/) | systemd services that host every service on one machine |
+| [`infra/hostinger`](infra/hostinger/) | Production deploy: server setup, nginx, hardened systemd units, `deploy.sh` |
 | [`docs`](docs/) | [Litepaper](docs/litepaper/finity-litepaper.pdf), [mainnet guide](docs/mainnet.md) |
 
 ## 20. Security notes

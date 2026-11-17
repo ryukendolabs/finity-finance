@@ -1,0 +1,30 @@
+[Unit]
+Description=Finity price relayer %i (signs reports with its own key; holds no SOL)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=finity
+Group=finity
+EnvironmentFile=/home/finity/.config/finity/env
+Environment=HOME=/home/finity
+Environment=NODE_ENV=production
+Environment=NODE_NO_WARNINGS=1
+WorkingDirectory=/opt/finity/backend
+Environment=RELAYER_INDEX=%i
+ExecStart=/opt/node/bin/node /opt/finity/backend/relayer.mjs
+Restart=always
+RestartSec=10
+MemoryMax=192M
+# Hardening: the services only write their own data and settings folders.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/home/finity/.local/share/finity /home/finity/.config/finity
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

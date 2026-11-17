@@ -167,7 +167,7 @@ async function tick() {
   }
 }
 
-if (process.argv[1]?.endsWith("indexer.ts")) {
+if (/indexer\.(ts|m?js)$/.test(process.argv[1] ?? "")) {
   log(`indexer → ${INDEX_DB}, every ${TICK_SECS}s`);
   await tick();
   setInterval(() => void tick(), TICK_SECS * 1000);
