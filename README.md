@@ -1,154 +1,352 @@
 # Finity Finance
 <img width="2846" height="1565" alt="Screenshot from 2026-11-17 17-06-01" src="https://github.com/user-attachments/assets/fa9975ea-3fbe-4815-a03d-6b98aa465394" />
 
+**Borrow on stocks, keep your weekend.** Finity is a lending protocol on Solana for tokenized stocks whose rules follow
+each stock's real market clock, so a loan is never liquidated on a price the exchange never printed.
 
+> **Live on Solana mainnet:** borrow USDC against xStocks (AAPLx, AMZNx, GOOGLx, MSFTx, NVDAx, TSLAx).
+> Program [`He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL`](https://explorer.solana.com/address/He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL) ·
+> [Litepaper (PDF)](docs/litepaper/finity-litepaper.pdf)
 
-A lending protocol on Solana for tokenized stocks and tokenized Treasury funds that follows each asset's market clock.
+---
 
-Stocks stop trading when their market closes, and Treasury funds price once a day. Lending protocols built for
-crypto-native assets assume a live price always exists, so they either liquidate on stale weekend prices or leave
-lenders silently carrying the Friday-to-Monday gap. Finity instead tracks every asset's market state, makes loans
-weekend-safe before the close (or insured), prices the reopen gap and sells it to a first-loss underwriter pool, and
-clears liquidations in uniform-price batch auctions instead of a bot race.
+## 1. What this is and who it's for
 
-> **Status:** live on Solana devnet with test tokens. Not audited. Do not use with real funds.
+Finity Finance lets you borrow USDC against tokenized stocks on Solana, under rules that know when the stock market is
+open, closing or closed. It is for:
 
-## How it works
+- **Holders of tokenized stocks** who want liquidity without selling their AAPLx or NVDAx, and without being liquidated
+  on a thin Sunday-night price.
+- **Lenders** who want to earn on USDC with collateral they understand, protected by a risk model built for market closures.
+- **Underwriters** who want to be paid for taking the reopen gap risk that lenders don't want.
 
-| # | Mechanism | What it does |
-| --- | --- | --- |
-| 1 | **Asset Clock** | Tracks each asset's market state on-chain: open, extended hours, closed, halted, reopening |
-| 2 | **Bell Check** | From 2 hours before every close, each loan must be at the closure-safe LTV or carry Gap Cover (auto-cover by default) |
-| 3 | **Gap Cover + Underwriter Pool** | A first-loss pool sells insurance on the reopen gap, priced on 256 stress scenarios, and absorbs bad debt first |
-| 4 | **Batch Auctions** | Every liquidation clears at one uniform price: intraday, extended hours, sealed-bid at the reopen, or pre-close |
+## 2. Story & inspiration
 
-Everything runs in one Anchor program, [`solana/programs/finity`](solana/programs/finity/). Inputs fail closed: if
-the clock, the prices or the calendar disagree, the asset is treated as closed. Keepers are untrusted; every keeper
-action is checked on-chain.
+We watched tokenized stocks arrive on Solana and saw the same thing happen again and again: a stock token trades all
+weekend, the lending markets mark it every second, and a quiet Saturday price moves a few percent on no news. Loans get
+liquidated on a price the Nasdaq never saw, and on Monday the stock opens exactly where it closed.
 
-| Area | What the program does |
+Crypto lending was designed for assets that never sleep. Stocks sleep for 80% of the week. We built Finity so that the
+loan follows the stock's own schedule: mark it to a live price while the market trades, make it safe before the close,
+and never liquidate it while the market is shut.
+
+## 3. Problem
+
+A US stock's regular session is 6.5 hours a day, 5 days a week: **32.5 of the week's 168 hours, about 19%**. For the
+other 81% the token keeps trading on-chain while the price that gives it value is frozen. Lending protocols built for
+crypto assets face a choice with no good answer:
+
+| Approach | What goes wrong |
 |---|---|
-| Lending | Borrow test USDC against six test stock tokens (75% max LTV) and a T-Bill fund (90%); kinked interest per market; Senior Vault with shares and a FIFO redeem queue |
-| Market clock | NYSE and US-bank calendars on-chain; closures, Bell window and deadline, open print, REOPEN, guardian halts |
-| Risk engine | Calibrated scenario sets and σ per market and closure type (weekend gaps since 2016); closure-safe LTV on debt projected to the reopen |
-| Underwriting | Two Underwriter Pools (stocks, T-Bill) in calendar epochs; Gap Cover priced on 256 joint stress scenarios |
-| Loss waterfall | Pool → protocol reserve → Senior Vault |
-| Auctions | INTRADAY (60 s), EMERGENCY (extended hours, never a covered loan), sealed-bid REOPEN, PRECLOSE; the pool buys what bidders don't at the reserve |
-| Pool inventory | What the pool buys counts in its NAV at min(value, cost); stocks are resold by a gradual Dutch auction, T-Bill fund tokens are redeemed with the fund (T+1) |
-| Oracle | Prices only as Ed25519-signed reports from 2 of 3 relayers, checked on-chain (median, freshness, ordering) |
-| Guardian | Borrow and cover pauses and a temporary max-LTV haircut; the admin role and upgrade authority can move to a Squads multisig |
+| Mark the weekend token price | Borrowers are liquidated on moves the reopen erases; liquidators farm thin weekend books |
+| Ignore the weekend | Lenders silently carry the Friday-to-Monday gap; one earnings or fraud gap creates bad debt |
+| Use a very low LTV all the time | Capital-inefficient for the 19% of the week when a live price exists |
 
-Every risk formula is tested bit for bit against the reference crate in [`solana/reference/risk-core`](solana/reference/risk-core/).
+The real risk is the **gap** at the reopen, $G = P_{open}/P_{close} - 1$, and its size depends on the stock and the
+length of the closure. Nobody prices it.
 
-## Services
+## 4. Solution
 
-| Service | Port | What it does |
+Finity makes the market clock a first-class part of every loan:
+
+1. **The Asset Clock** tracks each stock's exchange calendar on-chain: sessions, early closes, holidays, halts and
+   corporate actions.
+2. **The Bell** opens 2 hours before every close. From then on, new borrowing is capped at a **closure-safe LTV**, the
+   LTV that survives 99.9% of that stock's historical gaps for that kind of closure.
+3. **Gap Cover** lets a borrower keep a higher LTV through the closure by paying a premium priced from the same gap
+   history. An **Underwriter Pool** sells the cover and absorbs the first loss.
+4. **No liquidations while the market is closed.** Repaying and adding collateral always work; the loan is marked again
+   from the first real price after the reopen, and liquidations clear in **uniform-price batch auctions**, not a bot race.
+
+## 5. How it works
+
+```
+ Market open ───────────────────────────► Bell window (close − 2 h) ──► Close ──────────────► Reopen
+ limit = max LTV                           limit = closure-safe LTV       no liquidations      marked to the
+ live price, liquidation if HF < 1         on debt projected to reopen    Gap Cover pays gap   first real price
+```
+
+- **Closure-safe LTV.** For each stock and closure type, Finity stores a calibrated set of historical gaps $z_i$ (in units
+  of the stock's volatility $\sigma$, pooled across a peer group since 2016). Each gap maps to the share of collateral that
+  survives, $g(z) = \max(0, 1 + \sigma z - \delta)(1 - \kappa)$. The limit is $\min(g(z_{(\lceil \alpha n \rceil)}), \text{LTV}_{max})$
+  with $\alpha = 0.1\%$: the 1-in-1,000 gap. For AAPL over a weekend this gives 89.5%, so the 75% cap binds.
+- **Projected debt.** Interest keeps accruing while the market is closed, so the limit is measured on
+  $D_{proj} = D(1 + r \cdot d/365)$ at the reopen.
+- **Gap Cover premium.** $\pi = \max(\pi_{min}, (1 + \eta u'^2)[(1+\theta)\,EL + c\,\tau\,ES_{97.5\%}])$: expected loss
+  with a loading, plus the cost of capital against the tail for the length of the closure, rising with the pool's
+  utilization. A 90%-LTV AAPL loan of \$9,000 costs about **\$0.55** to carry through a weekend.
+- **Loss waterfall.** A reopen shortfall is paid by the Underwriter Pool first, then the protocol reserve, and only then by
+  senior lenders.
+
+All of the maths, with worked examples on real calibrated data, is in the
+[litepaper](docs/litepaper/finity-litepaper.pdf).
+
+## 6. Target users
+
+| User | Why Finity |
+|---|---|
+| Long-term holders of tokenized stocks | Unlock USDC without selling, and without weekend liquidation risk |
+| Active traders | Leverage on xStocks with limits that follow market hours |
+| USDC lenders | Yield from borrowers of blue-chip collateral, with first-loss capital in front of them |
+| Underwriters and market makers | Get paid for gap risk with premiums priced from history |
+| Treasuries and DAOs holding stock tokens | Borrow against them as working capital |
+
+## 7. Features
+
+- **Mainnet lending against xStocks**: six markets (AAPLx, AMZNx, GOOGLx, MSFTx, NVDAx, TSLAx), one USDC pool, 55% max
+  LTV, borrow and repay in one transaction each; paying a loan off returns all its collateral.
+- **Token-2022 native**: xStocks with their permanent-delegate, pause, scaled-UI and transfer-hook extensions are handled
+  with `TransferChecked`, alongside classic SPL USDC in the same instruction.
+- **A 9,384-byte program**: the whole mainnet lending program, written in Pinocchio, deployed for about 0.064 SOL.
+- **Price keeper**: posts all six prices in one transaction every 15 minutes while US markets are open; a price older than
+  20 minutes pauses new borrowing automatically.
+- **The full protocol engine**: Asset Clock with NYSE and US-bank calendars, the Bell, closure-safe LTV from calibrated
+  scenario sets, Gap Cover and Underwriter Pools priced on 256 joint stress scenarios, a Senior Vault with a FIFO redeem
+  queue, uniform-price batch auctions (intraday, extended hours, sealed-bid reopen, pre-close), 2-of-3 Ed25519-signed
+  oracle reports, and a guardian with pause powers. It runs live with test tokens today, ahead of its mainnet rollout.
+- **\$FINO staking**: fixed-term locks (7 to 365 days) with fixed rewards paid at unlock, at [`/stake`](apps/web/app/stake/).
+- **Alerts**: the Bell, auction results, epoch settlements and withdrawals, by inbox (Sign-In With Solana), browser push,
+  email or Telegram.
+- **Public API**: read-only JSON for markets, pools, auctions, positions and history, with OpenAPI and Prometheus metrics.
+- **Fee sponsoring**: the app covers network fees on the protocol pages, so users only sign.
+
+## 8. Addresses & revenue
+
+**Solana mainnet**
+
+| What | Address |
+|---|---|
+| Finity Lend program | [`He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL`](https://explorer.solana.com/address/He1CGvMi3EbBPiWJ4jdqgQhF5fauqSGq8nFHbo1DjQmL) |
+| Markets account | [`7wiQL1qrKVJumuYijeCMva4T2864xNsUUk3XgsM1cKHK`](https://explorer.solana.com/address/7wiQL1qrKVJumuYijeCMva4T2864xNsUUk3XgsM1cKHK) |
+| Loan token: USDC | [`EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`](https://explorer.solana.com/address/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v) |
+| AAPLx | [`XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp`](https://explorer.solana.com/address/XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp) |
+| AMZNx | [`Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg`](https://explorer.solana.com/address/Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg) |
+| GOOGLx | [`XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN`](https://explorer.solana.com/address/XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN) |
+| MSFTx | [`XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX`](https://explorer.solana.com/address/XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX) |
+| NVDAx | [`Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh`](https://explorer.solana.com/address/Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh) |
+| TSLAx | [`XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB`](https://explorer.solana.com/address/XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB) |
+
+The full address book is [`solana/client/lend.json`](solana/client/lend.json).
+
+**Revenue.** Finity earns from the spread between what borrowers pay and what lenders receive. Every dollar of
+interest is split **80% to senior lenders, 10% to the Underwriter Pool and 10% to the protocol reserve**, and Gap Cover
+premiums go to the underwriters who carry the risk. The mainnet launch runs at zero interest to bring in the first
+borrowers; protocol revenue switches on with interest and Gap Cover on mainnet (see the roadmap).
+
+## 9. Sponsor & partner integrations
+
+Finity is built on and integrates with:
+
+| Integration | How Finity uses it |
+|---|---|
+| **Solana** | Every program, account and transaction |
+| **xStocks** | The tokenized stocks accepted as collateral on mainnet |
+| **USDC** | The loan token on mainnet |
+| **Token-2022 (Token Extensions)** | Native handling of xStocks' extensions |
+| **Phantom, Solflare, Backpack** | Wallets, through the Wallet Standard |
+| **Squads** | Multisig handover of the admin role and upgrade authority |
+| **QuickNode** | Private RPC behind the app's server-side proxy |
+| **Alpaca** | Historical market data for the gap calibration |
+| **Yahoo Finance** | Live quotes read by the price relayers |
+
+## 10. Tech stack
+
+| Layer | Technology |
+|---|---|
+| Mainnet program | Rust, **Pinocchio 0.12** (no framework, `no_std`, lazy entrypoint), Token-2022 + SPL Token CPI |
+| Protocol engine | Rust, **Anchor 1.1**, fixed-point (18-decimal) risk maths, a reference crate for differential tests |
+| Tests | **LiteSVM** (in-process Solana VM), real mainnet mint fixtures, property tests against `risk-core` |
+| Client | TypeScript `@finity/solana`: instruction builders, decoders, PDAs and exact ports of the on-chain maths |
+| Web | **Next.js 16**, React, TanStack Query, Solana wallet-adapter, Sign-In With Solana |
+| Services | Node 24: relayers, keeper, Lend price keeper, indexer (SQLite), public API, notifier (web push, email, Telegram) |
+| Ops | systemd services, nginx-ready proxy settings, pnpm + Turborepo monorepo |
+
+## 11. Architecture
+
+```mermaid
+flowchart LR
+  subgraph Browser
+    UI[Next.js app<br/>Markets · Borrow · Lend · Stake · Underwrite · Auctions]
+  end
+  subgraph Server
+    RPC[RPC relay<br/>allow-listed programs only]
+    GAS[Fee sponsor]
+    API[Public API + indexer]
+  end
+  subgraph Keepers
+    REL[3 price relayers<br/>Ed25519-signed reports]
+    BOT[Protocol keeper<br/>clocks · Bell · epochs · auctions]
+    LK[Lend price keeper<br/>6 prices / 15 min]
+  end
+  subgraph Solana mainnet
+    LEND[Finity Lend program]
+    VAULTS[xStock vaults + USDC pool]
+  end
+  subgraph Protocol engine
+    FIN[Finity program<br/>clock · risk · cover · auctions]
+  end
+  UI -- wallet signs --> RPC --> LEND --> VAULTS
+  UI --> GAS
+  UI --> API
+  REL --> BOT --> FIN
+  FIN -- prices + market state --> LK --> LEND
+```
+
+- **Wallets only sign.** The app sends every transaction through its own relay, which forwards only Finity
+  transactions to a private RPC whose key never leaves the server.
+- **The mainnet program trusts nothing it can check.** Vaults are bound to the markets account, positions to their owner,
+  prices to a 20-minute freshness bound; duplicate accounts are rejected at the entrypoint.
+- **Inputs fail closed.** If the clock, the prices or the calendar disagree, a market is treated as closed.
+
+## 12. Competitors
+
+| | Finity | General Solana lenders | Tokenized-stock venues |
+|---|---|---|---|
+| Collateral | Tokenized stocks, built for them | Crypto first; stocks listed like any other token | Trading, not lending |
+| Weekend price | Never liquidates on it | Marked continuously | n/a |
+| Closure risk | Priced per stock and closure length | Covered by one low LTV, or not at all | n/a |
+| Gap insurance | Gap Cover + Underwriter Pool | None | None |
+| Liquidations | Uniform-price batch auctions | First-come bot race | n/a |
+
+We respect what Kamino, marginfi, Jupiter Lend and Save built for crypto collateral, and what Ondo Global Markets and
+xStocks did to bring stocks on-chain. Finity is the missing piece between them: a lender that understands market hours.
+
+## 13. Go to market
+
+1. **xStocks holders first.** They already hold the collateral and want USDC without selling. We meet them where they
+   trade: Solana DeFi communities, xStocks and wallet partners.
+2. **Seed the pool with aligned capital**, grow it with yield from blue-chip borrowers, then open the Senior Vault to all
+   lenders.
+3. **Underwriters as a second market.** Market makers and funds that understand equity gaps get a native way to sell
+   that risk.
+4. **Integrations**: wallets, portfolio apps and aggregators that show "borrow against your stocks" next to a holder's
+   balance.
+5. **\$FINO** aligns long-term users: staking for fee discounts and rewards.
+
+## 14. Business model
+
+| Revenue line | Mechanism | Status |
 |---|---|---|
-| Relayers 1–3 | 7701–7703 | Each reads stock quotes and signs price reports with its own key; holds no SOL and sends nothing |
-| Keeper | — | Forwards signed prices, pokes clocks, runs epochs, the Bell's auto-cover, auctions (and a test solver), the pool's inventory, the redeem queue and the notifier |
-| Indexer | — | Records transactions, prices, clock transitions, auctions and pool NAV into SQLite |
-| Public API | 8787 | Read-only JSON: markets, pools, auctions, positions, history; `/v1/openapi.json`, `/v1/health`, Prometheus `/metrics` |
-| Web app | 3000 | Every page: Overview, Markets, Borrow, Lend, Underwrite, Auctions, Risk, Alerts, Account, Settings, Faucet |
+| Interest spread | 10% of all borrow interest to the protocol reserve, 10% to underwriters, 80% to lenders | Built; on mainnet with interest |
+| Gap Cover | Premiums priced per closure, paid to the Underwriter Pool | Built; mainnet next |
+| Protocol share of premiums | A cut of Gap Cover premiums to the reserve | Planned |
+| Liquidation auctions | A fee on value recovered in batch auctions | Planned |
+| \$FINO fee discounts | Stakers pay lower loan fees, driving token demand | At token launch |
+| Integrations | Revenue share with wallets and apps that route borrowers | Planned |
 
-Alerts (the Bell, loans close to an auction, auction results, epoch settlements, withdrawals ready) land in an inbox
-behind Sign-In With Solana, and can also go out by browser push, email or Telegram (Settings → Notifications).
+The reserve is first-loss capital after the Underwriter Pool, so revenue makes lenders safer as the protocol grows.
 
-## Try it
+## 15. Roadmap
 
-1. Open the web app, switch your wallet (Phantom, Solflare, Backpack) to **devnet**, and connect.
-2. **Faucet:** get test stock tokens and test USDC (you need a little devnet SOL for fees).
-3. **Borrow:** deposit a stock token and borrow USDC; before a close, the Bell asks for a safe LTV or Gap Cover.
-4. **Lend** USDC to the Senior Vault, or **Underwrite** the weekend gap in a pool.
-5. **Auctions:** bid on liquidation lots, or buy what the pool holds from its falling-price resale.
-
-## Devnet
-
-| | |
+| Stage | What ships |
 |---|---|
-| Program | [`9GUKJUTYMZpvRhkfQyvVZ3j1Y8rcjKPfwJ5ovmfU9bY1`](https://explorer.solana.com/address/9GUKJUTYMZpvRhkfQyvVZ3j1Y8rcjKPfwJ5ovmfU9bY1?cluster=devnet) |
-| Address book | [`solana/client/devnet.json`](solana/client/devnet.json) (USDC and stock mints) |
-| Markets | AAPL, AMZN, GOOGL, MSFT, NVDA, TSLA (NYSE calendar) and TBILL (US-bank calendar) |
-| Plan and status | [`docs/solana-devnet-migration-plan.md`](docs/solana-devnet-migration-plan.md) |
+| ✅ **Live** | Finity Lend on mainnet: six xStock markets, USDC pool, 55% LTV, price keeper, Stake preview, litepaper |
+| ✅ **Built** | The full protocol engine: Asset Clock, Bell, closure-safe LTV, Gap Cover, Underwriter Pools, Senior Vault, batch auctions, 2-of-3 oracle, guardian, alerts, API |
+| **Next** | Interest and liquidation on mainnet; scenario-based closure-safe LTV per stock on mainnet |
+| **Then** | Gap Cover, Underwriter Pools and the Senior Vault on mainnet; external audit; Squads multisig |
+| **Token** | \$FINO launch, staking, fee discounts |
+| **Later** | More stocks and venues, multi-source oracle, integrations with wallets and aggregators |
 
-## Mainnet
+## 16. Team
 
-**Finity Lend** ([`solana/lend`](solana/lend/), a 9.4 KB Pinocchio program) puts borrowing on Solana mainnet: borrow
-USDC against xStocks (AAPLx, AMZNx, GOOGLx, MSFTx, NVDAx, TSLAx) up to 55% LTV, repay any time to get the collateral back.
-The pool is the lender's USDC. Its keeper posts the devnet protocol's prices while US markets are open. Deploy and setup
-cost ≈ 0.064 SOL. The **Markets**, **Borrow**, **Lend** and **Mainnet** pages use it; the other pages run the full
-protocol. Steps: [`docs/mainnet.md`](docs/mainnet.md).
+Built by **[RyukendoLabs](https://github.com/ryukendolabs)**.
 
-## Repository layout
-
-| Path | What it is |
-| --- | --- |
-| [`solana/programs/finity`](solana/programs/finity/) | Anchor program and its LiteSVM integration tests |
-| [`solana/reference/risk-core`](solana/reference/risk-core/) | Reference fixed-point risk math for the differential tests |
-| [`solana/data/calibration`](solana/data/calibration/) | Calendars, scenario sets, joint stress columns and σ tables loaded on-chain |
-| [`solana/lend`](solana/lend/) | Finity Lend: the mainnet program (Pinocchio, no Anchor), its LiteSVM tests and `deploy.sh` |
-| [`solana/client`](solana/client/) | TypeScript client (`@finity/solana`): IDL, PDAs, markets, math ports, address book |
-| [`solana/scripts`](solana/scripts/) | Seed and loaders, keeper, relayer, indexer, API, notifier, smoke and e2e checks, devnet upgrade, multisig handover |
-| [`solana/notify`](solana/notify/) | Alert inbox (SQLite) and delivery by push, email and Telegram |
-| [`apps/web`](apps/web/) | Web app (Next.js, Solana wallet-adapter), its RPC proxy and Sign-In With Solana |
-| [`infra/local`](infra/local/) | systemd user services that host every service on one machine |
-
-## Getting started
+## 17. Run locally
 
 Prerequisites (pinned in `.tool-versions`): Rust 1.95, Solana CLI 3.1, Anchor 1.1, Node 24, pnpm 10.
 
 ```sh
 pnpm install
-cd solana
-anchor build && cargo test     # program + LiteSVM integration tests and risk-core differential tests
-pnpm seed                      # mints, config, markets, Senior Vault liquidity
-pnpm load-risk                 # calendars, clocks, risk parameters and scenario sets
-pnpm load-pool                 # reserve, Underwriter Pools, joint stress columns, first-loss capital
-pnpm load-oracle               # relayer signer set (2 of 3) and guardian; keys in ~/.config/finity (mode 600)
-RELAYER_INDEX=1 pnpm relayer   # a price relayer (1..3), on 127.0.0.1:7701..7703
-pnpm bot                       # keeper (with RELAYER_URLS set, it forwards the relayers' signed reports)
-pnpm indexer                   # history into ~/.local/share/finity/index.db
-pnpm api                       # public read-only API on 127.0.0.1:8787
+infra/local/up.sh        # builds the web app and starts every service as systemd user services
+# web:  http://localhost:3000        stake: http://localhost:3000/stake
+# API:  http://127.0.0.1:8787/v1/health
+# logs: journalctl --user -fu finity-web      stop: infra/local/down.sh
 ```
 
-Every loader is idempotent. To host everything on this machine as auto-restarting systemd user services, run
-`infra/local/up.sh` (web on http://localhost:3000, API health on http://127.0.0.1:8787/v1/health, logs via
-`journalctl --user -fu finity-bot`, stop with `infra/local/down.sh`). For the web app alone:
-`cd apps/web && cp .env.example .env.local && pnpm dev`.
+Web app only: `cd apps/web && cp .env.example .env.local && pnpm dev`.
 
-### Configuration
-
-Private settings live in `~/.config/finity/env` (mode 600), read by every service; keys sit next to it.
+**Configuration.** Private settings live in `~/.config/finity/env` (mode 600), read by every service; keys sit next to
+it and never enter the repo.
 
 | Variable | Used for |
 |---|---|
-| `SOLANA_RPC_URL` | A private devnet RPC (e.g. QuickNode). The browser reaches it only through the app's `/api/rpc` proxy, so the key never leaves the server |
-| `SMTP_URL`, `SMTP_FROM` | Email alerts (off when unset) |
-| `TELEGRAM_BOT_TOKEN` | Telegram alerts (off when unset) |
-| `FINITY_APP_URL` | Links in alerts (default http://localhost:3000) |
+| `LEND_RPC_URL` | Private mainnet RPC for Finity Lend (the browser reaches it only through `/api/rpc/mainnet`) |
+| `SOLANA_RPC_URL` | Private RPC for the protocol engine (the browser reaches it only through `/api/rpc`) |
+| `LEND_LENDER` | The lender's wallet: the Lend page shows it the Supply action; never sent to the browser |
+| `GAS_SPONSOR_KEY` | Fee sponsor for the protocol pages (server only) |
+| `TRUST_PROXY_HEADERS` | `1` behind nginx, so rate limits count per client |
+| `SMTP_URL`, `SMTP_FROM`, `TELEGRAM_BOT_TOKEN` | Email and Telegram alerts (off when unset) |
 
-Browser push needs no account: its key pair is generated into `~/.config/finity/vapid.json`.
-
-### Checks
+**Protocol engine from scratch** (idempotent loaders):
 
 ```sh
 cd solana
-cargo test                     # 89 tests: program unit + integration, risk-core differential
-pnpm smoke                     # on devnet: faucet → deposit → borrow → repay → withdraw, lend → redeem
-pnpm e2e                       # on devnet: pool deposit, relayers, API, indexer, every web page, the RPC proxy
+anchor build
+pnpm seed && pnpm load-risk && pnpm load-pool && pnpm load-oracle
+RELAYER_INDEX=1 pnpm relayer & pnpm bot & pnpm indexer & pnpm api
 ```
 
-### Operations
+**Finity Lend** (see [`docs/mainnet.md`](docs/mainnet.md)):
 
 ```sh
-solana/scripts/deploy-devnet.sh               # SOL check → build → upgrade → loaders → services → smoke
-cd solana && MEMBERS=a,b,c THRESHOLD=2 pnpm handover   # dry run; add --execute to hand admin + upgrades to Squads
+solana/lend/deploy.sh mainnet          # builds 3 variants, runs the tests, prints the exact cost, asks first
+cd solana && pnpm lend seed --cluster mainnet && pnpm lend status --cluster mainnet
 ```
 
-## Limits
+## 18. Verify / tests
 
-Devnet only: test tokens, quotes from Yahoo Finance signed by our own relayer keys, a T-Bill fund whose redemptions
-the protocol itself pays, one keeper without failover, and SQLite instead of a database server. No audit.
+```sh
+cd solana && cargo test                 # 89 tests: protocol engine unit + integration, risk-core differential
+cd solana/lend && cargo build-sbf && cargo test   # Finity Lend: end-to-end against the real AAPLx mint
+cd solana && pnpm typecheck && (cd ../apps/web && npx tsc --noEmit)
+cd solana && pnpm lend status --cluster mainnet  # the live markets, prices and pool, read from mainnet
+```
 
-## License
+- Every risk formula is tested bit for bit against the reference crate in
+  [`solana/reference/risk-core`](solana/reference/risk-core/).
+- Finity Lend's tests run the compiled program in LiteSVM with a copy of the **real mainnet AAPLx mint** (Token-2022,
+  permanent delegate, pause and transfer-hook extensions): borrow, repay, over-limit refusal, stale-price gating, wrong
+  accounts, teardown, liquidation.
+- Anyone can verify the deployment: the program, the markets account and every vault are on the explorer (section 8).
+
+## 19. Repo layout
+
+| Path | What it is |
+| --- | --- |
+| [`solana/lend`](solana/lend/) | **Finity Lend**: the mainnet program (Pinocchio), its LiteSVM tests and `deploy.sh` |
+| [`solana/programs/finity`](solana/programs/finity/) | The protocol engine (Anchor) and its integration tests |
+| [`solana/reference/risk-core`](solana/reference/risk-core/) | Reference fixed-point risk maths for differential tests |
+| [`solana/data/calibration`](solana/data/calibration/) | Calendars, scenario sets, joint stress columns and σ tables |
+| [`solana/client`](solana/client/) | TypeScript client `@finity/solana`, including `lend.ts` and the address books |
+| [`solana/scripts`](solana/scripts/) | Loaders, keepers, relayers, indexer, API, notifier, `pnpm lend` operations |
+| [`solana/notify`](solana/notify/) | Alert inbox and delivery by push, email and Telegram |
+| [`apps/web`](apps/web/) | The web app, the stake page, the RPC relay, fee sponsor and Sign-In With Solana |
+| [`apps/web/public/site`](apps/web/public/site/) | The landing page |
+| [`infra/local`](infra/local/) | systemd services that host every service on one machine |
+| [`docs`](docs/) | [Litepaper](docs/litepaper/finity-litepaper.pdf), [mainnet guide](docs/mainnet.md) |
+
+## 20. Security notes
+
+- **Keys never touch the repo.** They live in `~/.config/finity` (mode 600); the relayers hold no SOL and send nothing.
+- **The RPC relay is allow-listed.** It forwards only transactions that call Finity Lend or move tokens into its pool,
+  only from this site's pages, with per-client rate limits; program scans need filters.
+- **The lender's address stays on the server.** The app only learns whether a connected wallet is the lender.
+- **Mainnet program safety.** Duplicate accounts rejected at the entrypoint; vaults checked against the markets account
+  on every transfer; integer LTV maths without division or overflow; borrowing needs a price under 20 minutes old;
+  repaying never needs one. A smaller teardown build returns every user's collateral and the pool to the lender.
+- **Known risks we are open about.** Mainnet Lend has no liquidation yet (the 55% limit gives a 45% buffer, and the pool
+  is kept small until liquidation ships); prices come from our keeper; xStocks' issuer holds a permanent delegate and
+  a pause switch. No external audit yet. See the [litepaper](docs/litepaper/finity-litepaper.pdf), section 9.
+- **Report a vulnerability** privately through GitHub Security Advisories on this repository.
+
+## 21. License
 
 MIT. See [LICENSE](LICENSE).
+
+## 22. Token flywheel
+
+Published at the \$FINO launch.
+
+## 23. Token details
+
+Published at the \$FINO launch.

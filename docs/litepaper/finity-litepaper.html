@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Finity Finance Litepaper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});document.body.dataset.ready='1'"></script>
+<style>
+  @font-face { font-family: "Caslon"; src: url("../../apps/web/public/fonts/LibreCaslonCondensed-Regular.otf"); }
+  @font-face { font-family: "Caslon"; font-style: italic; src: url("../../apps/web/public/fonts/LibreCaslonCondensed-Italic.otf"); }
+  @page { size: A4; margin: 0; }
+  :root { --ink:#1d1d1d; --grey:#6b6b6b; --line:#e6e8ee; --accent:#0054f9; --tile:#f3f5f9; --good:#2f8a5b; --bad:#c0392b;
+          --sky: radial-gradient(120% 95% at 0% 100%, #8db4ee 0%, #8db4ee00 58%), radial-gradient(85% 100% at 100% 0%, #d4e4fb 0%, #d4e4fb00 62%), #e8f0fc; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #fff; color: var(--ink); font: 10.2pt/1.5 Roboto, system-ui, sans-serif;
+               -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 210mm; height: 297mm; padding: 17mm 18mm 16mm; position: relative; overflow: hidden; page-break-after: always; break-after: page; }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+  .run { position: absolute; top: 8mm; left: 18mm; right: 18mm; display: flex; justify-content: space-between; font-size: 7.6pt; color: var(--grey); letter-spacing: .4px; text-transform: uppercase; }
+  .foot { position: absolute; bottom: 8mm; left: 18mm; right: 18mm; display: flex; justify-content: space-between; font-size: 7.6pt; color: var(--grey); border-top: 1px solid var(--line); padding-top: 2.5mm; }
+  h1, h2, h3 { font-family: Caslon, Georgia, serif; font-weight: 400; margin: 0; letter-spacing: -.2px; }
+  h2 { font-size: 25pt; line-height: 1.05; margin: 2mm 0 1.5mm; }
+  h2 .no { color: var(--accent); }
+  h3 { font-size: 14.5pt; margin: 5mm 0 1.5mm; }
+  p { margin: 0 0 2.6mm; }
+  .lede { color: var(--grey); font-size: 10.6pt; margin-bottom: 4mm; }
+  .eq { background: var(--tile); border-radius: 3mm; padding: 1mm 4mm; margin: 2.5mm 0 3mm; }
+  .eq .katex-display { margin: 2mm 0; }
+  .box { border: 1px solid var(--line); border-radius: 3mm; padding: 3.5mm 4.5mm; margin: 3mm 0; }
+  .box.sky { background: var(--sky); border: 0; }
+  .box h4 { margin: 0 0 1.5mm; font-size: 9.4pt; text-transform: uppercase; letter-spacing: .6px; color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 9.2pt; margin: 2mm 0 3mm; }
+  th { text-align: left; font-weight: 500; color: var(--grey); border-bottom: 1px solid var(--ink); padding: 1.4mm 2mm; font-size: 8.4pt; }
+  td { padding: 1.4mm 2mm; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  td.r, th.r { text-align: right; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .small { font-size: 8.6pt; color: var(--grey); }
+  .mono { font-family: "Roboto Mono", monospace; font-size: 8.8pt; }
+  ul { margin: 0 0 2.5mm; padding-left: 5mm; } li { margin-bottom: 1mm; }
+  .tag { display: inline-block; padding: .4mm 2.4mm; border-radius: 99px; background: var(--ink); color: #fff; font-size: 7.6pt; letter-spacing: .4px; }
+  /* cover */
+  .cover { background: var(--sky); padding: 0; }
+  .cover .inner { position: absolute; inset: 14mm; background: #ffffffc4; border-radius: 9mm; padding: 16mm 15mm; display: flex; flex-direction: column; }
+  .cover .brand { display: flex; align-items: center; gap: 3mm; font-family: Caslon, serif; font-size: 20pt; }
+  .cover .brand img { width: 9mm; }
+  .cover h1 { font-size: 52pt; line-height: .98; margin: 22mm 0 5mm; letter-spacing: -1px; }
+  .cover h1 em { font-style: italic; }
+  .cover .sub { font-size: 13pt; color: var(--grey); max-width: 140mm; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin-top: 12mm; }
+  .stat { background: #fff; border-radius: 4mm; padding: 4mm; }
+  .stat b { display: block; font-family: Caslon, serif; font-weight: 400; font-size: 21pt; line-height: 1.1; }
+  .stat span { font-size: 8.2pt; color: var(--grey); }
+  .toc { margin-top: auto; columns: 2; column-gap: 8mm; font-size: 9.6pt; }
+  .toc div { display: flex; justify-content: space-between; border-bottom: 1px dotted #c9ced8; padding: 1.2mm 0; break-inside: avoid; }
+  svg text { font-family: Roboto, sans-serif; }
+</style>
+</head>
+<body>
+
+<!-- 1 · Cover -->
+<section class="page cover">
+  <div class="inner">
+    <div class="brand"><img src="../../apps/web/public/landing/mark-finity.png" alt="" /> Finity Finance</div>
+    <div style="margin-top:8mm"><span class="tag">LITEPAPER · v1.0 · NOVEMBER 2026</span></div>
+    <h1>Borrow on stocks,<br /><em>keep</em> your weekend.</h1>
+    <p class="sub">A lending protocol for tokenized equities whose rules follow each market's real trading clock, so a loan is never
+      liquidated on a price printed while the exchange is closed.</p>
+    <div class="stats">
+      <div class="stat"><b>6</b><span>xStock markets live on Solana mainnet</span></div>
+      <div class="stat"><b>55%</b><span>max loan-to-value, checked on-chain</span></div>
+      <div class="stat"><b>9,384</b><span>bytes: the whole lending program</span></div>
+      <div class="stat"><b>99.9%</b><span>gap-scenario coverage of the safe LTV rule</span></div>
+    </div>
+    <div class="toc">
+      <div><span>1 · The weekend problem</span><span>2</span></div>
+      <div><span>2 · The Asset Clock and the Bell</span><span>3</span></div>
+      <div><span>3 · Closure-safe LTV</span><span>4</span></div>
+      <div><span>4 · Rates and the lending pool</span><span>5</span></div>
+      <div><span>5 · Pricing Gap Cover</span><span>6</span></div>
+      <div><span>6 · Who pays first; liquidations</span><span>7</span></div>
+      <div><span>7 · Finity Lend on mainnet</span><span>8</span></div>
+      <div><span>8 · $FINO staking</span><span>9</span></div>
+      <div><span>9 · Risks and roadmap</span><span>10</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · Problem -->
+<section class="page">
+  <div class="run"><span>Finity Finance · Litepaper</span><span>The weekend problem</span></div>
+  <h2><span class="no">1</span> · The weekend problem</h2>
+  <p class="lede">Tokenized stocks trade on-chain every hour of the week. The stocks behind them do not.</p>
+  <p>A US equity trades in a regular session of 6.5 hours, five days a week. Out of the 168 hours in a week, the reference market is open for</p>
+  <div class="eq">$$\frac{6.5 \times 5}{168} = \frac{32.5}{168} \approx 19.3\%$$</div>
+  <p>of the time. For the other 80.7%, including every overnight, every weekend and every holiday, the token keeps trading while the
+    price that gives it value is frozen. Any on-chain price in that window is a guess made in a thin market, and the true price is only
+    revealed at the reopen, as a <em>gap</em>:</p>
+  <div class="eq">$$G \;=\; \frac{P_{\text{open}}}{P_{\text{close}}} - 1$$</div>
+  <p>A lender that marks collateral continuously faces two bad outcomes. If it trusts the weekend price, it liquidates borrowers on
+    moves that the reopen may erase. If it ignores the weekend, it carries the gap: a loan with debt \(D\) against collateral worth
+    \(V\) at the close is short of collateral at the reopen exactly when</p>
+  <div class="eq">$$D \;>\; V\,(1+G) \quad\Longleftrightarrow\quad G \;<\; \frac{D}{V} - 1 \;=\; \text{LTV} - 1 .$$</div>
+  <p>At 75% LTV the lender loses money only if the stock gaps down by more than 25%, which is rare but not impossible: single-name
+    weekend gaps of that size follow earnings, fraud findings and macro shocks. The question is not <em>whether</em> to lend
+    through closures but <em>how much</em>, and that depends on how long the closure is and how volatile that stock is.</p>
+  <div class="box sky">
+    <h4>Finity's principle</h4>
+    <p style="margin:0">Every rule follows the asset's own clock. While the market is open, loans are marked to a live price. As a
+      closure approaches, new borrowing is capped at an LTV that history says survives the gap. While it is closed, nobody is
+      liquidated on a price the market never printed; repaying and adding collateral always work.</p>
+  </div>
+  <h3>What this paper covers</h3>
+  <p>Sections 2 to 6 describe the full protocol: the Asset Clock, the closure-safe LTV and its statistics, the interest-rate model,
+    the pricing of Gap Cover (insurance on the reopen) and the order in which losses are absorbed. Section 7 describes Finity Lend,
+    the small program live on Solana mainnet today. Section 8 previews $FINO staking. All formulas are the ones the code runs; the
+    worked examples use the protocol's calibrated parameters.</p>
+  <div class="foot"><span>Finity Finance · Litepaper v1.0</span><span>2</span></div>
+</section>
+
+<!-- 3 · Asset Clock -->
+<section class="page">
+  <div class="run"><span>Finity Finance · Litepaper</span><span>The Asset Clock</span></div>
+  <h2><span class="no">2</span> · The Asset Clock and the Bell</h2>
+  <p class="lede">Each market carries a clock that knows its exchange calendar: sessions, early closes, holidays, halts and corporate actions.</p>
+  <svg viewBox="0 0 640 128" width="100%" style="margin:1mm 0 3mm">
+    <rect x="10" y="44" width="300" height="34" rx="8" fill="#e8f0fc" />
+    <rect x="310" y="44" width="104" height="34" rx="0" fill="#fff4dc" />
+    <rect x="414" y="44" width="216" height="34" rx="8" fill="#eceef2" />
+    <text x="160" y="66" text-anchor="middle" font-size="12" fill="#1d1d1d">Regular session · limit = max LTV</text>
+    <text x="362" y="62" text-anchor="middle" font-size="11" fill="#1d1d1d">Bell window</text>
+    <text x="362" y="74" text-anchor="middle" font-size="9" fill="#6b6b6b">safe LTV on D_proj</text>
+    <text x="522" y="66" text-anchor="middle" font-size="12" fill="#1d1d1d">Closed · no liquidations</text>
+    <line x1="310" y1="34" x2="310" y2="88" stroke="#0054f9" stroke-width="1.5" />
+    <line x1="388" y1="34" x2="388" y2="88" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="3 3" />
+    <line x1="414" y1="34" x2="414" y2="88" stroke="#1d1d1d" stroke-width="1.5" />
+    <text x="310" y="26" text-anchor="middle" font-size="10" fill="#0054f9">close − 2 h</text>
+    <text x="388" y="104" text-anchor="middle" font-size="10" fill="#c0392b">Bell deadline (−15 min)</text>
+    <text x="414" y="26" text-anchor="middle" font-size="10" fill="#1d1d1d">close</text>
+    <text x="628" y="104" text-anchor="end" font-size="10" fill="#6b6b6b">reopen → REOPEN state, then regular</text>
+  </svg>
+  <p>The clock moves through six states: <b>Regular</b>, <b>Extended</b>, <b>Closed</b>, <b>Reopen</b>, <b>Halted</b> and
+    <b>Corporate action</b>. The borrowing limit that applies at time \(t\) is chosen from the state:</p>
+  <div class="eq">$$L(t)=\begin{cases}\text{LTV}_{\max} & \text{regular and } t < t_{\text{close}}-2\,\text{h}\\[2pt]
+    \text{LTV}_{\text{safe}}(c)\ \text{measured on } D_{\text{proj}} & \text{Bell window, extended, closed or halted}\\[2pt]
+    0\ \ (\text{new debt paused}) & \text{reopen or corporate action}\end{cases}$$</div>
+  <p>where \(c\) is the closure the rule looks at: the one in progress, else the next scheduled one (overnight, weekend or holiday
+    weekend; halts use the holiday-weekend set because their length is unknown).</p>
+  <h3>Projected debt</h3>
+  <p>Interest keeps accruing while the market is closed, so the safe rule measures debt as it will stand at the reopen:</p>
+  <div class="eq">$$D_{\text{proj}} = D\left(1 + r\cdot\frac{d}{365}\right),\qquad d = \left\lceil \frac{t_{\text{reopen}}-t_{\text{close}}}{86\,400} \right\rceil$$</div>
+  <p>Example: \(D = \$1{,}000\) at \(r = 5.33\%\) over a 3-day weekend gives \(D_{\text{proj}} = 1000\,(1 + 0.0533\cdot 3/365) = \$1{,}000.44\).</p>
+  <h3>The Bell</h3>
+  <p>Two hours before the close the Bell window opens. A loan is flagged when</p>
+  <div class="eq">$$\frac{D_{\text{proj}}}{V} \;>\; \text{LTV}_{\text{safe}}(c).$$</div>
+  <p>A flagged borrower has until the Bell deadline (15 minutes before the close) to repay, add collateral or buy Gap Cover
+    (section 5). After the deadline the Bell can auto-cover a loan that is within the coverable limit, adding the premium to its debt.
+    Nobody is liquidated during the closure itself.</p>
+  <div class="foot"><span>Finity Finance · Litepaper v1.0</span><span>3</span></div>
+</section>
+
+<!-- 4 · Safe LTV -->
+<section class="page">
+  <div class="run"><span>Finity Finance · Litepaper</span><span>Closure-safe LTV</span></div>
+  <h2><span class="no">3</span> · Closure-safe LTV</h2>
+  <p class="lede">How much can a loan borrow and still be covered after the worst gap history shows, at a chosen confidence?</p>
+  <p>For each asset and closure type the protocol stores a <b>scenario set</b>: \(n\) standardized historical gaps \(z_1 \le z_2 \le
+    \dots \le z_n\), measured in units of the asset's per-closure volatility \(\sigma\). Sets are pooled across a peer group so the tail
+    is not estimated from one name alone; AAPL's weekend set pools 16 large-cap technology stocks (7,552 observations) and applies a
+    Student-t (3 d.o.f.) floor to the extreme tail. Each scenario maps to a <b>gap factor</b>, the fraction of today's collateral value
+    that survives the reopen:</p>
+  <div class="eq">$$g(z) = \max\!\big(0,\; 1 + \sigma z - \delta\big)\,(1-\kappa)$$</div>
+  <p>with \(\delta\) a known dividend drop and \(\kappa = 3\%\) a liquidation-cost haircut. The safe LTV is the gap factor at the
+    \(\alpha\)-quantile of the scenarios, capped at the market's maximum:</p>
+  <div class="eq">$$\text{LTV}_{\text{safe}} = \min\!\Big(g\big(z_{(k)}\big),\ \text{LTV}_{\max}\Big),\qquad k=\lceil \alpha n\rceil,\quad \alpha = 0.1\%$$</div>
+  <p>Read it as: in 99.9% of the stored scenarios, a loan at \(\text{LTV}_{\text{safe}}\) is still fully covered at the reopen after the
+    haircut. The computation is integer fixed point on-chain (18-decimal WAD), and the scenario sets are content-hashed so anyone can
+    check what the program uses.</p>
+  <h3>Worked example: AAPL</h3>
+  <table>
+    <tr><th>Closure</th><th class="r">\(\sigma\)</th><th class="r">\(n\)</th><th class="r">\(k\)</th><th class="r">\(z_{(k)}\)</th><th class="r">\(g(z_{(k)})\)</th><th class="r">Safe LTV</th></tr>
+    <tr><td>Overnight</td><td class="r">0.946%</td><td class="r">3,000</td><td class="r">3</td><td class="r">−11.144</td><td class="r">86.78%</td><td class="r">75%</td></tr>
+    <tr><td>Weekend</td><td class="r">1.068%</td><td class="r">3,000</td><td class="r">3</td><td class="r">−7.208</td><td class="r">89.54%</td><td class="r">75%</td></tr>
+    <tr><td>Holiday weekend</td><td class="r">0.959%</td><td class="r">1,472</td><td class="r">2</td><td class="r">−5.860</td><td class="r">91.55%</td><td class="r">75%</td></tr>
+  </table>
+  <p>For the weekend: \(g = (1 - 0.010675 \times 7.208)(1 - 0.03) = 0.92305 \times 0.97 = 0.8954\). The worst 0.1% of weekend gaps
+    would still leave an 89.5%-LTV loan covered, so for a mega-cap like AAPL the 75% maximum binds and the closure costs the borrower
+    nothing. A more volatile name, or a longer holiday closure, produces a smaller \(g\) and a lower limit automatically.</p>
+  <div class="box">
+    <h4>Deployment note</h4>
+    <p style="margin:0">The mainnet program (section 7) does not run the scenario engine on-chain yet. It applies one conservative
+      closure-safe limit, 55%, at all times, and lends only while a fresh price exists. The engine above runs in the full protocol.</p>
+  </div>
+  <div class="foot"><span>Finity Finance · Litepaper v1.0</span><span>4</span></div>
+</section>
+
+<!-- 5 · Rates -->
+<section class="page">
+  <div class="run"><span>Finity Finance · Litepaper</span><span>Rates and the lending pool</span></div>
+  <h2><span class="no">4</span> · Rates and the lending pool</h2>
+  <p class="lede">Each market has its own kinked interest-rate curve, driven by utilization.</p>
+  <p>Utilization is the share of supplied cash that is lent out, \(u = B/S\). The borrow rate rises gently up to a kink \(u^\ast\) and
+    steeply after it, which pulls utilization back below the kink by raising the cost of the last dollars:</p>
+  <div class="eq">$$r(u)=\begin{cases} r_0 + s_1\,\dfrac{u}{u^\ast} & u \le u^\ast\\[8pt] r_0 + s_1 + s_2\,\dfrac{u-u^\ast}{1-u^\ast} & u > u^\ast\end{cases}$$</div>
+  <div class="two">
+    <div>
+      <table>
+        <tr><th>Parameter</th><th class="r">Stocks</th><th class="r">NAV fund</th></tr>
+        <tr><td>Base \(r_0\)</td><td class="r">2%</td><td class="r">1%</td></tr>
+        <tr><td>Slope \(s_1\)</td><td class="r">6%</td><td class="r">4%</td></tr>
+        <tr><td>Jump \(s_2\)</td><td class="r">80%</td><td class="r">60%</td></tr>
+        <tr><td>Kink \(u^\ast\)</td><td class="r">90%</td><td class="r">92%</td></tr>
+      </table>
+      <table>
+        <tr><th>\(u\)</th><th class="r">Borrow APR</th><th class="r">Supply APY</th></tr>
+        <tr><td>20%</td><td class="r">3.33%</td><td class="r">0.53%</td></tr>
+        <tr><td>50%</td><td class="r">5.33%</td><td class="r">2.13%</td></tr>
+        <tr><td>90%</td><td class="r">8.00%</td><td class="r">5.76%</td></tr>
+        <tr><td>95%</td><td class="r">48.00%</td><td class="r">36.48%</td></tr>
+      </table>
+    </div>
+    <svg viewBox="0 0 300 230" width="100%">
+      <line x1="40" y1="200" x2="290" y2="200" stroke="#1d1d1d" />
+      <line x1="40" y1="200" x2="40" y2="12" stroke="#1d1d1d" />
+      <line x1="265" y1="200" x2="265" y2="20" stroke="#0054f9" stroke-dasharray="3 3" />
+      <text x="265" y="16" text-anchor="middle" font-size="9" fill="#0054f9">kink 90%</text>
+      <polyline fill="none" stroke="#1d1d1d" stroke-width="2.2" points="40,196.3 265,182.2 290,103.1" />
+      <polyline fill="none" stroke="#2f8a5b" stroke-width="2.2" points="40,200 90,199.4 152.5,196.0 215,188.8 265,180.9 277.5,154.3 290,121.5" />
+      <text x="40" y="214" font-size="9" fill="#6b6b6b">0%</text><text x="152" y="214" font-size="9" fill="#6b6b6b">50%</text>
+      <text x="290" y="214" text-anchor="end" font-size="9" fill="#6b6b6b">100%</text>
+      <text x="34" y="200" text-anchor="end" font-size="9" fill="#6b6b6b">0</text>
+      <text x="34" y="112" text-anchor="end" font-size="9" fill="#6b6b6b">40%</text>
+      <line x1="38" y1="109" x2="42" y2="109" stroke="#1d1d1d" />
+      <text x="58" y="40" font-size="10" fill="#1d1d1d">— borrow APR r(u)</text>
+      <text x="58" y="56" font-size="10" fill="#2f8a5b">— supply APY</text>
+      <text x="165" y="228" text-anchor="middle" font-size="9" fill="#6b6b6b">utilization u</text>
+    </svg>
+  </div>
+  <h3>Accrual and the fee split</h3>
+  <p>Interest accrues per second on total borrows \(B\) over the elapsed time \(\Delta t\) (\(Y\) = seconds per year), and is split three
+    ways: 80% to senior lenders, 10% to the Underwriter Pool, 10% to the protocol reserve.</p>
+  <div class="eq">$$i = B\, r(u)\,\frac{\Delta t}{Y},\qquad \text{APY}_{\text{supply}} = r(u)\cdot u\cdot(1-f_{\text{pool}}-f_{\text{reserve}}) = 0.8\,u\,r(u)$$</div>
+  <h3>Vault shares</h3>
+  <p>Lenders hold shares of one senior vault. Share price uses virtual shares \(S_0 = 1{,}000\) and one virtual asset, so the first
+    depositor cannot inflate the price to steal later deposits:</p>
+  <div class="eq">$$\text{assets}(s) = \frac{s\,(A+1)}{S + S_0},\qquad \text{shares}(a)=\frac{a\,(S+S_0)}{A+1}$$</div>
+  <div class="foot"><span>Finity Finance · Litepaper v1.0</span><span>5</span></div>
+</section>
+
+<!-- 6 · Gap Cover -->
+<section class="page">
+  <div class="run"><span>Finity Finance · Litepaper</span><span>Pricing Gap Cover</span></div>
+  <h2><span class="no">5</span> · Pricing Gap Cover</h2>
+  <p class="lede">A borrower who wants to stay above the safe LTV through a closure can buy Gap Cover: if the reopen gaps past the
+    collateral, the Underwriter Pool pays the shortfall.</p>
+  <p>The premium is priced from the same scenario set. For each scenario the loss to the lender is the part of the projected debt that
+    the surviving collateral does not cover:</p>
+  <div class="eq">$$L_i = \max\!\big(0,\; D_{\text{proj}} - V\,g(z_i)\big)$$</div>
+  <p>From the losses the protocol takes the expected loss and the expected shortfall in the worst \(1-\beta\) of scenarios:</p>
+  <div class="eq">$$\text{EL} = \frac{1}{n}\sum_{i=1}^{n} L_i,\qquad \text{ES}_\beta = \frac{1}{m}\sum_{i=1}^{m} L_{(i)},\qquad m=\lceil (1-\beta)\,n\rceil$$</div>
+  <p>The premium pays for the expected loss with a safety loading \(\theta\), plus the cost of holding capital against the tail for the
+    length of the closure \(\tau = d/365\), and rises with the pool's utilization after the sale \(u'\):</p>
+  <div class="eq">$$\pi = \max\!\Big(\pi_{\min},\ \big(1+\eta\,u'^2\big)\big[(1+\theta)\,\text{EL} + c\,\tau\,\text{ES}_\beta\big]\Big)$$</div>
+  <table>
+    <tr><th>Parameter</th><th>Meaning</th><th class="r">Value</th></tr>
+    <tr><td>\(\beta\)</td><td>Expected-shortfall level</td><td class="r">97.5%</td></tr>
+    <tr><td>\(\theta\)</td><td>Loading on expected loss</td><td class="r">100%</td></tr>
+    <tr><td>\(c\)</td><td>Annual cost of capital</td><td class="r">15%</td></tr>
+    <tr><td>\(\eta\)</td><td>Utilization surcharge</td><td class="r">4</td></tr>
+    <tr><td>\(\pi_{\min}\)</td><td>Minimum premium</td><td class="r">0.50 USDC</td></tr>
+    <tr><td>\(u_{\max}\)</td><td>Pool utilization cap</td><td class="r">50%</td></tr>
+  </table>
+  <div class="box sky">
+    <h4>Worked example · AAPL, weekend</h4>
+    <p>Collateral \(V = \$10{,}000\), projected debt \(D_{\text{proj}} = \$9{,}000\) (90% LTV, far above the 75% limit), 3-day closure,
+      pool utilization after the sale \(u' = 30\%\). Of the 3,000 scenarios only three lose money: \(L = 418.55,\ 131.30,\ 46.39\).</p>
+    <p style="margin:0">\(\text{EL} = 596.24/3000 = 0.1988\),&nbsp; \(m = \lceil 0.025\times3000\rceil = 75\),&nbsp;
+      \(\text{ES} = 596.24/75 = 7.950\),&nbsp; \(\tau = 3/365\)<br />
+      \(\pi = (1+4\times0.09)\,[\,2\times0.1988 + 0.15\times\tfrac{3}{365}\times7.950\,] = 1.36\times0.4073 = \mathbf{0.554\ USDC}\)</p>
+  </div>
+  <p>Keeping a 90% LTV through the weekend costs about 55 cents on $9,000 of debt, because a gap large enough to hurt happened in
+    0.1% of the history. The same formula prices a volatile name or a long holiday much higher, and the \(\eta u'^2\) term makes cover
+    expensive before the pool runs out of capacity.</p>
+  <div class="foot"><span>Finity Finance · Litepaper v1.0</span><span>6</span></div>
+</section>
+
+<!-- 7 · Waterfall & liquidation -->
+<section class="page">
+  <div class="run"><span>Finity Finance · Litepaper</span><span>Who pays first</span></div>
+  <h2><span class="no">6</span> · Who pays first; liquidations</h2>
+  <p class="lede">Losses are absorbed in a fixed order, so senior lenders know exactly what stands in front of them.</p>
+  <svg viewBox="0 0 640 132" width="100%" style="margin:1mm 0 3mm">
+    <rect x="10" y="10" width="190" height="112" rx="12" fill="#1d1d1d" />
+    <text x="105" y="56" text-anchor="middle" font-size="14" fill="#fff">Underwriter Pool</text>
+    <text x="105" y="76" text-anchor="middle" font-size="10" fill="#cfd5df">earns premiums, pays first</text>
+    <rect x="225" y="10" width="190" height="112" rx="12" fill="#e8f0fc" />
+    <text x="320" y="56" text-anchor="middle" font-size="14" fill="#1d1d1d">Protocol reserve</text>
+    <text x="320" y="76" text-anchor="middle" font-size="10" fill="#6b6b6b">10% of interest</text>
+    <rect x="440" y="10" width="190" height="112" rx="12" fill="#fff" stroke="#1d1d1d" />
+    <text x="535" y="56" text-anchor="middle" font-size="14" fill="#1d1d1d">Senior Vault</text>
+    <text x="535" y="76" text-anchor="middle" font-size="10" fill="#6b6b6b">only after both are used</text>
+    <text x="212" y="70" text-anchor="middle" font-size="16" fill="#0054f9">→</text>
+    <text x="428" y="70" text-anchor="middle" font-size="16" fill="#0054f9">→</text>
+  </svg>
+  <p>For a shortfall \(S\) at a reopen, with pool net asset value \(N_p\) and reserve cash \(R\):</p>
+  <div class="eq">$$S_{\text{pool}} = \min(S, N_p),\quad S_{\text{reserve}} = \min(S - S_{\text{pool}},\, R),\quad S_{\text{senior}} = S - S_{\text{pool}} - S_{\text{reserve}}$$</div>
+  <p>The pool's capacity limits how much cover it may sell: it holds a stress buffer computed over \(K = 256\) joint scenarios (all markets
+    gapping together), and stops selling at \(u_{\max} = 50\%\) utilization, so one bad weekend cannot empty it.</p>
+  <h3>Health and liquidation (open market only)</h3>
+  <p>While the market trades, a loan is marked to the live price \(P\). With liquidation threshold \(\text{LT}\) (80% for stocks):</p>
+  <div class="eq">$$\text{HF} = \frac{V\cdot \text{LT}}{D},\qquad \text{liquidatable} \iff \text{HF} < 1$$</div>
+  <p>A keeper may repay up to half the debt (close factor 50%) and receives collateral worth that repayment plus a bonus \(b\) (3%):</p>
+  <div class="eq">$$\text{seized} = \frac{R\,(1+b)}{P},\qquad R \le 0.5\,D$$</div>
+  <div class="box">
+    <h4>Example</h4>
+    <p style="margin:0">10 AAPL at $200 (\(V = \$2{,}000\)), debt \(D = \$1{,}650\): \(\text{HF} = 2000\times0.8/1650 = 0.970 < 1\).
+      A keeper repays \(R = \$825\) and seizes \(825\times1.03/200 = 4.249\) AAPL. The loan is left with \(D = \$825\) against
+      5.751 AAPL (\(V = \$1{,}150\)): \(\text{HF} = 1150\times0.8/825 = 1.115\), healthy again.</p>
+  </div>
+  <p class="small">During a closure there is no liquidation at all: the Bell, the safe LTV and Gap Cover replace it, and the loan is
+    marked again from the first price after the reopen.</p>
+  <div class="foot"><span>Finity Finance · Litepaper v1.0</span><span>7</span></div>
+</section>
+
+<!-- 8 · Mainnet -->
+<section class="page">
+  <div class="run"><span>Finity Finance · Litepaper</span><span>Finity Lend on mainnet</span></div>
+  <h2><span class="no">7</span> · Finity Lend on mainnet</h2>
+  <p class="lede">The first live step: borrow USDC against xStocks on Solana mainnet, in a 9,384-byte program.</p>
+  <p>Finity Lend lists six xStocks (AAPLx, AMZNx, GOOGLx, MSFTx, NVDAx, TSLAx; Token-2022, 8 decimals) against one USDC pool. A borrower
+    deposits collateral and borrows in one instruction, and gets all the collateral back in the instruction that repays the loan. The
+    program is written in Pinocchio (no framework), so it fits a deploy budget of under $5.</p>
+  <h3>The limit check, without division</h3>
+  <p>Prices and loans carry 6 decimals. The program checks the limit in 128-bit integers with no division (division is an expensive
+    software routine on Solana's virtual machine):</p>
+  <div class="eq">$$D \cdot 10^{4}\cdot 10^{6} \;\le\; C \cdot P \cdot \text{LTV}_{\text{bps}}$$</div>
+  <p>where \(C\) is collateral in base units and \(P\) is the posted price <em>per \(10^6\) base units</em>. For a token with \(e\)
+    decimals the keeper posts \(P = p\cdot10^{6}/10^{e}\), i.e. \(p/100\) for the 8-decimal xStocks, so the same check serves every token.
+    The left side stays below \(2^{98}\); the right side is bounded before multiplying, so nothing overflows.</p>
+  <div class="box sky">
+    <h4>Worked example · NVDAx (verified on-chain)</h4>
+    <p style="margin:0">5 NVDAx \(= 5\times10^{8}\) units at $156.14: \(P = 156.14\times10^{6}/100 = 1{,}561{,}400\).
+      Maximum debt \(= \lfloor 5\cdot10^{8}\times1{,}561{,}400\times5{,}500 / 10^{10}\rfloor = 429{,}385{,}000\) units \(= \mathbf{429.385}\)
+      USDC, exactly 55% of $780.70. One more unit is refused by the program.</p>
+  </div>
+  <h3>Freshness and pausing</h3>
+  <p>A keeper posts all six prices in one transaction every 15 minutes while US markets are open. Borrowing needs</p>
+  <div class="eq">$$t_{\text{now}} - t_{\text{price}} \le 1{,}200\ \text{s} \quad\text{and}\quad P > 0,$$</div>
+  <p>so outside market hours, or if the keeper stops, new loans simply wait. Repaying never needs a price.</p>
+  <h3>Cost to run</h3>
+  <table>
+    <tr><th>Item</th><th class="r">Bytes</th><th class="r">SOL (rent, refundable)</th></tr>
+    <tr><td>Program</td><td class="r">9,384</td><td class="r">0.04938</td></tr>
+    <tr><td>Markets account</td><td class="r">528</td><td class="r">0.00333</td></tr>
+    <tr><td>6 xStock vaults + USDC vault</td><td class="r">6×179 + 165</td><td class="r">0.01085</td></tr>
+    <tr><td>Each price update</td><td class="r">—</td><td class="r">0.000005 (fee)</td></tr>
+  </table>
+  <p class="small">Rent \(= (\text{bytes}+128)\times5{,}080\) lamports. The whole deployment cost about 0.0637 SOL; a trading day of price
+    updates costs about 0.00014 SOL.</p>
+  <div class="foot"><span>Finity Finance · Litepaper v1.0</span><span>8</span></div>
+</section>
+
+<!-- 9 · Staking -->
+<section class="page">
+  <div class="run"><span>Finity Finance · Litepaper</span><span>$FINO staking</span></div>
+  <h2><span class="no">8</span> · $FINO staking <span class="tag" style="vertical-align:middle">PREVIEW</span></h2>
+  <p class="lede">Lock $FINO for a fixed term and receive the principal plus a fixed reward at unlock. Staking opens with the token;
+    the rates below are illustrative.</p>
+  <p>A stake of \(A\) tokens locked for term \(T\) at reward rate \(r_T\) pays, automatically at the unlock time \(t_0 + T\):</p>
+  <div class="eq">$$\text{payout} = A\,(1 + r_T),\qquad \text{annualized rate} = r_T\cdot\frac{365}{T}$$</div>
+  <table>
+    <tr><th>Term \(T\)</th><th class="r">Reward \(r_T\)</th><th class="r">1,000 $FINO pays</th><th class="r">Annualized</th></tr>
+    <tr><td>7 days</td><td class="r">2%</td><td class="r">1,020</td><td class="r">104%</td></tr>
+    <tr><td>30 days</td><td class="r">10%</td><td class="r">1,100</td><td class="r">122%</td></tr>
+    <tr><td>90 days</td><td class="r">35%</td><td class="r">1,350</td><td class="r">142%</td></tr>
+    <tr><td>180 days</td><td class="r">80%</td><td class="r">1,800</td><td class="r">162%</td></tr>
+    <tr><td>365 days</td><td class="r">175%</td><td class="r">2,750</td><td class="r">175%</td></tr>
+  </table>
+  <p>Longer terms earn a higher annualized rate, which rewards commitment. Because rewards are fixed at lock time, the program must
+    always be able to pay every open ticket. With \(j\) open stakes and a reward reserve \(Q\):</p>
+  <div class="eq">$$\sum_{j} A_j\, r_{T_j} \;\le\; Q \qquad\text{(checked before every new lock)}$$</div>
+  <p>A lock that would break this inequality is refused, so the staking vault is solvent by construction: it holds every principal plus
+    every promised reward.</p>
+  <h3>Lower loan fees</h3>
+  <p>A wallet with an active lock pays a lower fee on Finity loans. For a fee \(f\) on a loan of size \(D\), the saving over a year of
+    borrowing is \((f_{\text{base}} - f_{\text{staked}})\,D\); for an active borrower this can exceed the staking reward itself.</p>
+  <div class="box">
+    <h4>Status</h4>
+    <p style="margin:0">The staking page is live as a preview: it shows the terms and computes payouts, but no tokens move until $FINO
+      launches. Terms, rates, the reserve \(Q\) and the fee discount will be fixed and published before launch.</p>
+  </div>
+  <div class="foot"><span>Finity Finance · Litepaper v1.0</span><span>9</span></div>
+</section>
+
+<!-- 10 · Risks -->
+<section class="page">
+  <div class="run"><span>Finity Finance · Litepaper</span><span>Risks and roadmap</span></div>
+  <h2><span class="no">9</span> · Risks and roadmap</h2>
+  <p class="lede">What can go wrong, and what comes next.</p>
+  <h3>Risks</h3>
+  <ul>
+    <li><b>No liquidation on mainnet yet.</b> Finity Lend checks the limit only when borrowing. If a stock falls far enough that
+      \(D > V\), a borrower can keep the USDC and the pool takes the loss. The 55% limit means a fall of more than
+      \(1 - 0.55 = 45\%\) before that happens; the pool is kept small until liquidation ships.</li>
+    <li><b>Price authority.</b> Prices are posted by one keeper key. Whoever controls it could post a wrong price; key security and,
+      later, a multi-source oracle address this.</li>
+    <li><b>Issuer controls.</b> xStocks carry a permanent delegate and a pause switch held by their issuer, who can move or freeze
+      tokens, including those in Finity's vaults.</li>
+    <li><b>Model risk.</b> The safe LTV is only as good as the scenario sets. History can underestimate a new kind of shock; the
+      haircut \(\kappa\), the t-tail floor and the cap \(\text{LTV}_{\max}\) are the margins of safety.</li>
+    <li><b>Smart-contract risk.</b> The programs are tested (end-to-end against the real AAPLx mint) but not yet externally audited.</li>
+  </ul>
+  <h3>Roadmap</h3>
+  <table>
+    <tr><th>Stage</th><th>What ships</th></tr>
+    <tr><td>Now</td><td>Finity Lend on mainnet: six xStock markets, USDC pool, 55% limit, price keeper</td></tr>
+    <tr><td>Next</td><td>Liquidation and interest on mainnet; the scenario-based safe LTV per closure</td></tr>
+    <tr><td>Then</td><td>Gap Cover and the Underwriter Pool on mainnet; senior vault for open lending</td></tr>
+    <tr><td>Token</td><td>$FINO launch and staking; fee discounts for stakers</td></tr>
+    <tr><td>Later</td><td>Multi-source oracle; external audit; more assets and calendars</td></tr>
+  </table>
+  <h3>Summary</h3>
+  <p>Finity lends against tokenized stocks on the stocks' own schedule. The maths is simple to state: lend
+    \(\min(g(z_{(\lceil \alpha n \rceil)}),\ \text{LTV}_{\max})\) through a closure, price the rest as insurance, and never liquidate on a price
+    the market never printed.</p>
+  <div class="box" style="margin-top:5mm">
+    <p class="small" style="margin:0"><b>Disclaimer.</b> This litepaper describes software and its mathematics. It is not an offer of
+      securities or tokens, nor investment, legal or tax advice. Tokenized stocks may not be available in every jurisdiction. Borrowing
+      against volatile assets can lose money. Parameters and rates may change; $FINO does not exist yet and its terms are not final.</p>
+  </div>
+  <div class="foot"><span>Finity Finance · Litepaper v1.0</span><span>10</span></div>
+</section>
+
+</body>
+</html>
